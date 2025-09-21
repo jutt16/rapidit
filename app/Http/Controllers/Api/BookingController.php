@@ -9,6 +9,7 @@ use App\Models\CookBooking;
 use App\Models\PartnerAvailability;
 use App\Models\PartnerProfile;
 use App\Models\UserAddress;
+use App\Models\Setting; // ✅ added
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -92,7 +93,9 @@ class BookingController extends Controller
                 // 5. Find nearby partners (Haversine)
                 $lat = $address->latitude;
                 $lng = $address->longitude;
-                $radius = 10; // km
+
+                // ✅ radius from settings table; fallback = 10 km
+                $radius = (float) (Setting::where('key', 'search_radius_km')->value('value') ?? 10);
 
                 $partners = PartnerProfile::selectRaw("
                     partner_profiles.*, 

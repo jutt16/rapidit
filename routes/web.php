@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\PartnerController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\ServiceController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StaticPageController;
 use App\Http\Controllers\Admin\SupportController;
 
@@ -63,6 +64,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/reviews/{id}', [ReviewController::class, 'show'])->name('reviews.show');
         Route::post('/reviews/{id}/approve', [ReviewController::class, 'approve'])->name('reviews.approve');
         Route::post('/reviews/{id}/reject', [ReviewController::class, 'reject'])->name('reviews.reject');
+
+        Route::get('settings/provider-radius', [SettingsController::class, 'edit'])->name('settings.radius.edit');
+        Route::put('settings/provider-radius', [SettingsController::class, 'update'])->name('settings.radius.update');
 
         // logout route
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

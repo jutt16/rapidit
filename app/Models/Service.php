@@ -14,11 +14,15 @@ class Service extends Model
         'picture',
         'price',
         'tax',
+        'commission_pct',
+        'cancellation_charges',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'tax'   => 'decimal:2',
+        'commission_pct' => 'float',
+        'cancellation_charges' => 'decimal:2',
     ];
 
     /**

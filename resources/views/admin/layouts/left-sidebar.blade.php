@@ -114,6 +114,15 @@
                         <p>Support Messages</p>
                     </a>
                 </li>
+
+                <!-- ✅ Settings menu -->
+                <li class="nav-item">
+                    <a href="{{ route('admin.settings.radius.edit') }}"
+                        class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-cog"></i>
+                        <p>Settings</p>
+                    </a>
+                </li>
             </ul>
         </nav>
         <!-- /.sidebar-menu -->

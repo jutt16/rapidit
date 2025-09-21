@@ -13,7 +13,7 @@ class AuthController extends Controller
     {
         try {
             $validated = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
+                'name' => 'nullable|string|max:255',
                 'phone' => 'required|string|max:15|unique:users',
                 'password' => 'required|string|min:8|confirmed',
                 'phone_verified' => 'boolean',
@@ -23,7 +23,7 @@ class AuthController extends Controller
             ])->validate();
 
             $user = \App\Models\User::create([
-                'name' => $validated['name'],
+                'name' => $validated['name'] ?? null,
                 'phone' => $validated['phone'],
                 'password' => Hash::make($validated['password']),
                 'phone_verified' => $validated['phone_verified'] ?? false,

@@ -27,11 +27,15 @@ class ServiceController extends Controller
         $request->validate([
             'price' => 'required|numeric|min:0',
             'tax'   => 'required|numeric|min:0',
+            'commission_pct' => 'required|numeric|min:0|max:100',
+            'cancellation_charges'=> 'required|numeric|min:0',
         ]);
 
         $service->update([
             'price' => $request->price,
             'tax'   => $request->tax,
+            'commission_pct' => $request->commission_pct,
+            'cancellation_charges'=> $request->cancellation_charges, 
         ]);
 
         return redirect()->route('admin.services.index')

@@ -35,6 +35,8 @@
                             <th>Name</th>
                             <th>Price</th>
                             <th>Tax</th>
+                            <th>Commission (%)</th>
+                            <th>Cancellation Charges</th>
                             <th>Total (Price + Tax)</th>
                             <th>Actions</th>
                         </tr>
@@ -47,6 +49,8 @@
                             <td>{{ $service->name }}</td>
                             <td>{{ number_format($service->price, 2) }}</td>
                             <td>{{ number_format($service->tax, 2) }}</td>
+                            <td>{{ number_format($service->commission_pct, 2) }}</td>
+                            <td>{{ number_format($service->cancellation_charges, 2) }}</td>
                             <td>{{ number_format($service->price_with_tax, 2) }}</td>
                             <td>
                                 <a href="{{ route('admin.services.edit', $service) }}"

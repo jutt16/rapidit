@@ -48,6 +48,19 @@
                         <input type="number" step="0.01" name="tax" class="form-control"
                             value="{{ old('tax', $service->tax) }}" required>
                     </div>
+
+                    <div class="form-group">
+                        <label>Commission (%)</label>
+                        <input type="number" step="0.01" name="commission_pct" class="form-control"
+                            value="{{ old('commission_pct', $service->commission_pct) }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cancellation Charges</label>
+                        <input type="number" step="0.01" name="cancellation_charges" class="form-control"
+                            value="{{ old('cancellation_charges', $service->cancellation_charges) }}" required>
+                    </div>
+
                 </div>
 
                 <div class="card-footer">
