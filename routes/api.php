@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\ServicePriceController;
 use App\Http\Controllers\Api\StaticPageController;
 use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\UserAddressController;
+use App\Http\Controllers\Api\UserProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -46,6 +47,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/partner/profile', [PartnerProfileController::class, 'store']);
     Route::get('/partner/profile', [PartnerProfileController::class, 'show']);
     Route::put('/partner/profile', [PartnerProfileController::class, 'update']);
+
+    Route::get('/user/profile', [UserProfileController::class, 'get']);
+    Route::post('/user/profile', [UserProfileController::class, 'update']);
 
     Route::get('/partner/preferences', [PartnerPreferenceController::class, 'index']);
     Route::post('/partner/preferences', [PartnerPreferenceController::class, 'store']);

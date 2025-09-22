@@ -57,6 +57,11 @@ class User extends Authenticatable
         return $this->hasOne(\App\Models\PartnerProfile::class);
     }
 
+    public function profile()
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
     public function availability()
     {
         return $this->hasOne(\App\Models\PartnerAvailability::class, 'partner_id');
