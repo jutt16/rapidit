@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\BookingPayment;
+use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Razorpay\Api\Api;
@@ -32,7 +33,7 @@ class BookingPaymentController extends Controller
      */
     public function pay(Request $request, Booking $booking)
     {
-        $user = $request->user();
+        $user = User::findorFail(4);//$request->user();
 
         if ($booking->user_id !== $user->id) {
             abort(403, 'Unauthorized');
