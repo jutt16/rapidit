@@ -76,7 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Payment routes
     // Initiate payment (COD or create razorpay link)
-    Route::get('/bookings/{booking}/pay', [BookingPaymentController::class, 'pay']);
+    
     // Poll payment status
     Route::get('/bookings/{booking}/payment-status', [BookingPaymentController::class, 'status']);
 
@@ -98,5 +98,6 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Public endpoints (Razorpay will call / redirect)
+Route::get('/bookings/{booking}/pay', [BookingPaymentController::class, 'pay']);
 Route::get('/payments/callback', [BookingPaymentController::class, 'callback'])->name('payments.callback');
 Route::post('/payments/webhook', [BookingPaymentController::class, 'webhook'])->name('payments.webhook');
