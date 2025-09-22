@@ -27,59 +27,67 @@ class UserProfileController extends Controller
      */
     public function update(Request $request)
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        // ✅ Validate inputs using Validator facade
-        $validator = Validator::make($request->all(), [
-            'name'          => 'sometimes|string|max:255',
-            'phone'         => 'sometimes|string|max:20|unique:users,phone,' . $user->id,
-            'email'         => 'sometimes|email|max:255',
-            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
+            // ✅ Validate inputs using Validator facade
+            $validator = Validator::make($request->all(), [
+                'name'          => 'sometimes|string|max:255',
+                'phone'         => 'sometimes|string|max:20|unique:users,phone,' . $user->id,
+                'email'         => 'sometimes|email|max:255',
+                'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $data = $validator->validated();
-
-        // ✅ update user basic info (except email, which is in user_profiles)
-        $user->update([
-            'name'  => $data['name']  ?? $user->name,
-            'phone' => $data['phone'] ?? $user->phone,
-        ]);
-
-        // ✅ check profile record (create if not exists)
-        $profile = $user->profile ?: new UserProfile(['user_id' => $user->id]);
-
-        // ✅ update email (in profile table)
-        if (isset($data['email'])) {
-            $profile->email = $data['email'];
-        }
-
-        // ✅ if profile image uploaded
-        if ($request->hasFile('profile_image')) {
-            if ($profile->profile_image && Storage::disk('public')->exists('profiles/' . $profile->profile_image)) {
-                Storage::disk('public')->delete('profiles/' . $profile->profile_image);
+            if ($validator->fails()) {
+                return response()->json([
+                    'errors' => $validator->errors(),
+                ], 422);
             }
 
-            $filename = time() . '.' . $request->file('profile_image')->getClientOriginalExtension();
-            $filename = time() . '.' . $request->file('profile_image')->getClientOriginalExtension();
+            $data = $validator->validated();
 
-            // store file and return its relative path
-            $path = $request->file('profile_image')->storeAs('profiles', $filename, 'public');
+            // ✅ update user basic info (except email, which is in user_profiles)
+            $user->update([
+                'name'  => $data['name']  ?? $user->name,
+                'phone' => $data['phone'] ?? $user->phone,
+            ]);
 
-            // store relative path in DB (e.g. "profiles/1695389321.jpg")
-            $profile->profile_image = $path;
+            // ✅ check profile record (create if not exists)
+            $profile = $user->profile ?: new UserProfile(['user_id' => $user->id]);
+
+            // ✅ update email (in profile table)
+            if (isset($data['email'])) {
+                $profile->email = $data['email'];
+            }
+
+            // ✅ if profile image uploaded
+            if ($request->hasFile('profile_image')) {
+                if ($profile->profile_image && Storage::disk('public')->exists('profiles/' . $profile->profile_image)) {
+                    Storage::disk('public')->delete('profiles/' . $profile->profile_image);
+                }
+
+                $filename = time() . '.' . $request->file('profile_image')->getClientOriginalExtension();
+                $filename = time() . '.' . $request->file('profile_image')->getClientOriginalExtension();
+
+                // store file and return its relative path
+                $path = $request->file('profile_image')->storeAs('profiles', $filename, 'public');
+
+                // store relative path in DB (e.g. "profiles/1695389321.jpg")
+                $profile->profile_image = $path;
+            }
+
+            $profile->save();
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Profile updated successfully',
+                'user'    => $user->fresh('profile'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'error' => $e->getMessage()
+            ]);
         }
-
-        $profile->save();
-
-        return response()->json([
-            'message' => 'Profile updated successfully',
-            'user'    => $user->fresh('profile'),
-        ]);
     }
 }
