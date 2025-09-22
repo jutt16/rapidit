@@ -10,12 +10,10 @@
 <body>
     <h3>Pay for Booking #{{ $booking->id }}</h3>
 
-    <button id="rzp-button">Pay with Razorpay</button>
-
     <script>
         var options = {
             "key": "{{ $key }}",
-            "amount": "{{ $amount }}", // amount in paise
+            "amount": "{{ $amount }}", // in paise
             "currency": "INR",
             "name": "RapidIT",
             "description": "Booking #{{ $booking->id }}",
@@ -29,7 +27,7 @@
                 "color": "#3399cc"
             },
             "handler": function(response) {
-                // Redirect to callback route with payment details
+                // Auto redirect to callback
                 window.location.href =
                     "{{ route('payments.callback') }}" +
                     "?razorpay_payment_id=" + response.razorpay_payment_id +
@@ -39,9 +37,10 @@
         };
 
         var rzp1 = new Razorpay(options);
-        document.getElementById('rzp-button').onclick = function(e) {
+
+        // ✅ Open automatically on page load
+        window.onload = function() {
             rzp1.open();
-            e.preventDefault();
         }
     </script>
 </body>
