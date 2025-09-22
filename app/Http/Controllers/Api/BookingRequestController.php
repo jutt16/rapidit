@@ -13,31 +13,38 @@ class BookingRequestController extends Controller
      */
     public function index(Request $request)
     {
-        $user = $request->user(); // from Sanctum
+        try {
+            $user = $request->user(); // from Sanctum
 
-        $requests = BookingRequest::with([
-            'booking.user',
-            'booking.service',
-            'booking.address',
-            'partner.profile'
-        ])
-            ->when($user->role === 'partner', function ($q) use ($user) {
-                // Partner → only their requests
-                $q->where('partner_id', $user->id);
-            })
-            ->when($user->role === 'user', function ($q) use ($user) {
-                // Normal user → only their bookings’ requests
-                $q->whereHas('booking', function ($q2) use ($user) {
-                    $q2->where('user_id', $user->id);
-                });
-            })
-            ->latest()
-            ->get();
+            $requests = BookingRequest::with([
+                'booking.user',
+                'booking.service',
+                'booking.address',
+                'partner.partnerprofile'
+            ])
+                ->when($user->role === 'partner', function ($q) use ($user) {
+                    // Partner → only their requests
+                    $q->where('partner_id', $user->id);
+                })
+                ->when($user->role === 'user', function ($q) use ($user) {
+                    // Normal user → only their bookings’ requests
+                    $q->whereHas('booking', function ($q2) use ($user) {
+                        $q2->where('user_id', $user->id);
+                    });
+                })
+                ->latest()
+                ->get();
 
-        return response()->json([
-            'success' => true,
-            'data'    => $requests,
-        ]);
+            return response()->json([
+                'success' => true,
+                'data'    => $requests,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error'    => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

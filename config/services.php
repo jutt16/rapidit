@@ -34,10 +34,16 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-    
+
     'firebase' => [
         'credentials' => env('FIREBASE_CREDENTIALS'),
         'project_id'  => env('FIREBASE_PROJECT_ID'),
+    ],
+
+    'razorpay' => [
+        'key_id' => env('RAZORPAY_KEY_ID'),
+        'key_secret' => env('RAZORPAY_KEY_SECRET'),
+        'mode' => env('RAZORPAY_MODE', 'test'),
     ],
 
 ];

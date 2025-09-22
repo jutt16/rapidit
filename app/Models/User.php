@@ -61,4 +61,24 @@ class User extends Authenticatable
     {
         return $this->hasOne(\App\Models\PartnerAvailability::class, 'partner_id');
     }
+
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    public function creditWallet($amount, $description = null)
+    {
+        $wallet = $this->wallet ?? Wallet::create(['user_id' => $this->id]);
+        return $wallet->credit($amount, $description);
+    }
+
+    public function debitWallet($amount, $description = null)
+    {
+        $wallet = $this->wallet;
+        if (!$wallet) {
+            throw new \Exception("Wallet not found");
+        }
+        return $wallet->debit($amount, $description);
+    }
 }
