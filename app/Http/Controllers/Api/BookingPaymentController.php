@@ -31,43 +31,27 @@ class BookingPaymentController extends Controller
      * If booking->payment_method == 'cod' -> create record (status pending).
      * If 'razorpay' -> create Payment Link, return URL.
      */
-    public function pay(Request $request, Booking $booking)
+    public function pay($bookingId)
     {
-        $user = User::findorFail(4);//$request->user();
+        $booking = Booking::findOrFail($bookingId);
 
-        if ($booking->user_id !== $user->id) {
-            abort(403, 'Unauthorized');
-        }
-
-        $amount = intval($booking->total_amount * 100); // in paise
-
-        $api = new \Razorpay\Api\Api(
-            env('RAZORPAY_KEY_ID'),
-            env('RAZORPAY_KEY_SECRET')
-        );
-
-        // Create order on Razorpay
+        $api = new \Razorpay\Api\Api(env('RAZORPAY_KEY'), env('RAZORPAY_SECRET'));
         $order = $api->order->create([
-            'receipt' => 'booking_' . $booking->id,
-            'amount' => $amount,
+            'receipt' => 'order_rcptid_' . $booking->id,
+            'amount' => $booking->amount * 100, // paise
             'currency' => 'INR',
         ]);
 
-        // Save to DB
-        $payment = BookingPayment::create([
-            'booking_id' => $booking->id,
-            'payment_method' => 'razorpay',
-            'amount' => $booking->total_amount,
-            'status' => 'pending',
-            'razorpay_order_id' => $order['id'],
-        ]);
-
-        // Send variables to view
-        return view('razorpay-checkout', [
+        return view('razorpay.pay', [
             'booking' => $booking,
-            'key' => env('RAZORPAY_KEY_ID'),
-            'amount' => $amount,
-            'order_id' => $order['id'],
+            'amount' => $booking->amount * 100,
+            'orderId' => $order['id'],
+            'razorpayKey' => env('RAZORPAY_KEY'),
+            'customer' => [
+                'name' => $booking->user->name,
+                'email' => $booking->user->email,
+                'contact' => $booking->user->phone,
+            ]
         ]);
     }
 
