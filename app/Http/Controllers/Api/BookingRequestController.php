@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 
 class BookingRequestController extends Controller
 {
+
     /**
      * Get all booking requests for the authenticated user/partner
      */
@@ -88,6 +89,9 @@ class BookingRequestController extends Controller
     /**
      * Reject a booking request (partner only)
      */
+    /**
+     * Reject a booking request (partner only)
+     */
     public function reject(Request $request, $id)
     {
         $user = $request->user();
@@ -106,11 +110,15 @@ class BookingRequestController extends Controller
         // Mark this one rejected
         $bookingRequest->update(['status' => 'rejected']);
 
-        // Expire all other requests for this booking
-        BookingRequest::where('booking_id', $bookingRequest->booking_id)
-            ->where('id', '!=', $bookingRequest->id)
-            ->where('status', 'pending')
-            ->update(['status' => 'expired']);
+        // Check if there are other requests for this booking still pending or accepted
+        $hasActiveRequests = BookingRequest::where('booking_id', $bookingRequest->booking_id)
+            ->whereIn('status', ['pending', 'accepted'])
+            ->exists();
+
+        if (! $hasActiveRequests) {
+            // No active requests → reject booking itself
+            $bookingRequest->booking->update(['status' => 'rejected']);
+        }
 
         return response()->json([
             'success' => true,
