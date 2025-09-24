@@ -216,4 +216,65 @@ class BookingController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Reschedule a booking (user only)
+     */
+    public function reschedule(Request $request, $id)
+    {
+        $user = $request->user();
+
+        // 1. Validation
+        $validator = Validator::make($request->all(), [
+            'schedule_date' => 'required|date',
+            'schedule_time' => 'required|string', // format "HH:MM-HH:MM"
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        // 2. Find booking
+        $booking = Booking::where('id', $id)
+            ->where('user_id', $user->id) // only user can reschedule their own booking
+            ->firstOrFail();
+
+        // 3. Check if any request is already accepted
+        $hasAccepted = BookingRequest::where('booking_id', $booking->id)
+            ->where('status', 'accepted')
+            ->exists();
+
+        if ($hasAccepted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This booking is already accepted by a partner and cannot be rescheduled.',
+            ], 422);
+        }
+
+        // 4. Update booking
+        $booking->update([
+            'schedule_date' => $request->schedule_date,
+            'schedule_time' => $request->schedule_time,
+            'status'        => 'pending', // reset status after reschedule
+        ]);
+
+        // 5. Expire all old requests (since time changed)
+        BookingRequest::where('booking_id', $booking->id)
+            ->whereIn('status', ['pending', 'expired'])
+            ->update(['status' => 'expired']);
+
+        // ⚡ Optionally: re-run partner search & send fresh requests 
+        // (same as in store() method)
+        // -- If you want this, I can extract your partner search logic into a private method 
+        //    and reuse here to avoid code duplication.
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Booking rescheduled successfully.',
+            'data'    => $booking->fresh(),
+        ]);
+    }
 }

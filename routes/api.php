@@ -73,6 +73,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Booking routes
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::post('/bookings/create', [BookingController::class, 'store']);
+    Route::post('/bookings/{id}/reschedule', [BookingController::class, 'reschedule']);
 
     // Booking Requests
     Route::get('/booking-requests', [BookingRequestController::class, 'index']);
