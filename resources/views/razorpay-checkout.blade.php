@@ -27,12 +27,20 @@
                 "color": "#3399cc"
             },
             "handler": function(response) {
-                // Auto redirect to callback
-                window.location.href =
-                    "{{ route('payments.callback') }}" +
-                    "?razorpay_payment_id=" + response.razorpay_payment_id +
-                    "&razorpay_order_id=" + response.razorpay_order_id +
-                    "&razorpay_signature=" + response.razorpay_signature;
+                // ✅ Create a form to POST response securely
+                var form = document.createElement('form');
+                form.method = "POST";
+                form.action = "{{ route('payments.callback') }}";
+
+                form.innerHTML = `
+                    <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="razorpay_payment_id" value="${response.razorpay_payment_id}">
+                    <input type="hidden" name="razorpay_order_id" value="${response.razorpay_order_id}">
+                    <input type="hidden" name="razorpay_signature" value="${response.razorpay_signature}">
+                `;
+
+                document.body.appendChild(form);
+                form.submit();
             }
         };
 
