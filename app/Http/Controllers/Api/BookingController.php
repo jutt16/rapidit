@@ -16,6 +16,81 @@ use Illuminate\Support\Facades\Validator;
 
 class BookingController extends Controller
 {
+    public function index(Request $request)
+    {
+        try {
+            $user = $request->user(); // ✅ Authenticated via Sanctum
+
+            if ($user->role === 'user') {
+                // -----------------------------
+                // USER: get all their bookings
+                // -----------------------------
+                $bookings = Booking::with([
+                    'service',
+                    'address',
+                    'cookBooking',
+                    'maidPackage',
+                    'review',
+                ])
+                    ->where('user_id', $user->id)
+                    ->latest()
+                    ->get()
+                    ->map(function ($booking) {
+                        if (in_array($booking->status, ['accepted', 'confirmed', 'completed'])) {
+                            $booking->requests = $booking->requests()
+                                ->with('partner.partnerProfile')
+                                ->get();
+                        } else {
+                            unset($booking->requests);
+                        }
+                        return $booking;
+                    });
+            } elseif ($user->role === 'partner') {
+                // -----------------------------
+                // PARTNER: get bookings via requests
+                // -----------------------------
+                $bookings = Booking::with([
+                    'service',
+                    'address',
+                    'cookBooking',
+                    'maidPackage',
+                    'review',
+                    'user.profile',
+                ])
+                    ->whereHas('requests', function ($q) use ($user) {
+                        $q->where('partner_id', $user->id);
+                    })
+                    ->latest()
+                    ->get()
+                    ->map(function ($booking) use ($user) {
+                        // Filter only this partner's requests
+                        $booking->requests = $booking->requests()
+                            ->where('partner_id', $user->id)
+                            ->with('partner.partnerProfile')
+                            ->get();
+
+                        return $booking;
+                    });
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid role. Must be user or partner.',
+                ], 403);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data'    => $bookings,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch bookings.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function store(Request $request)
     {
         try {

@@ -1,8 +1,8 @@
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
-    <a href="{{ route('admin.dashboard') }}" class="brand-link d-flex align-items-center" style="padding: 0.5rem 1rem; gap: 0.75rem;">
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;background:white;color:#FFD700;font-weight:bold;border-radius:50%;font-size:26px;box-shadow:0 2px 6px rgba(0,0,0,0.2);">R</span>
-        <span class="brand-text font-weight-light text-capitalize" style="font-size:1.1rem; color:#ffffff;">Rapid It</span>
+    <a href="{{ route('admin.dashboard') }}" class="brand-link">
+        <img src="{{ asset('admin-assets/dist/img/logo.png') }}" alt="Admin Logo" class="brand-image img-circle elevation-3" style="opacity: .8;">
+        <span class="brand-text font-weight-light text-capitalize">{{ Auth::user()->role }}</span>
     </a>
 
     <div class="sidebar">

@@ -71,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/cook/calculate', [ServicePriceController::class, 'calculateCookPrice']);
 
     // Booking routes
+    Route::get('/bookings', [BookingController::class, 'index']);
     Route::post('/bookings/create', [BookingController::class, 'store']);
 
     // Booking Requests
@@ -80,7 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Payment routes
     // Initiate payment (COD or create razorpay link)
-    
+
     // Poll payment status
     Route::get('/bookings/{booking}/payment-status', [BookingPaymentController::class, 'status']);
 

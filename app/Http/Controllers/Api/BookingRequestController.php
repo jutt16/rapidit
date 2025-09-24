@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
 use App\Models\BookingRequest;
 use Illuminate\Http\Request;
 
@@ -73,6 +74,9 @@ class BookingRequestController extends Controller
             ->where('id', '!=', $bookingRequest->id)
             ->where('status', 'pending')
             ->update(['status' => 'expired']);
+
+        Booking::findOrFail($bookingRequest->booking_id)
+            ->update(['status' => 'accepted']);
 
         return response()->json([
             'success' => true,
