@@ -44,7 +44,7 @@ class BookingPaymentController extends Controller
                 'booking_id'         => $booking->id,
                 'razorpay_order_id'  => $order['id'],
                 'amount'             => $booking->amount,
-                'status'             => 'created',
+                'status'             => 'pending',
             ]);
 
             return view('razorpay.pay', [
