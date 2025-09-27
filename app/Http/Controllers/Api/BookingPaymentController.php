@@ -49,8 +49,8 @@ class BookingPaymentController extends Controller
                     'sms' => true,
                     'email' => true,
                 ],
+                // ✅ only callback_url (no callback_method)
                 'callback_url' => url("/api/payments/callback"),
-                'callback_method' => 'post',
             ]);
 
             // Store payment record
@@ -67,7 +67,7 @@ class BookingPaymentController extends Controller
                 'message' => 'Payment link created successfully',
                 'data' => [
                     'link_id'       => $link['id'],
-                    'payment_url'   => $link['short_url'],   // ✅ this is the clickable payment URL
+                    'payment_url'   => $link['short_url'],   // ✅ use this to redirect user
                     'amount'        => $booking->amount,
                     'currency'      => 'INR',
                     'callback_url'  => url("/api/payments/callback"),
