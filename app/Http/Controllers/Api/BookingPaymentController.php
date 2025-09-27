@@ -27,40 +27,47 @@ class BookingPaymentController extends Controller
      * If booking->payment_method == 'cod' -> create record (status pending).
      * If 'razorpay' -> create Payment Order, return view.
      */
-    public function pay($bookingId)
+    public function pay(Request $request, $id)
     {
-        $booking = Booking::with('user')->findOrFail($bookingId);
-
         try {
+            $booking = Booking::findOrFail($id);
+
+            // Amount in paise (Razorpay works in INR paise, so multiply by 100)
+            $amount = $booking->amount * 100;
+
             // Create Razorpay order
             $order = $this->api->order->create([
-                'receipt'  => 'order_rcptid_' . $booking->id,
-                'amount'   => $booking->amount * 100, // in paise
+                'receipt'  => uniqid('rcpt_'),
+                'amount'   => $amount,
                 'currency' => 'INR',
             ]);
 
-            // Save initial payment record
-            BookingPayment::create([
-                'booking_id'         => $booking->id,
-                'razorpay_order_id'  => $order['id'],
-                'amount'             => $booking->amount,
-                'status'             => 'pending',
+            // Store payment record
+            $payment = BookingPayment::create([
+                'booking_id'   => $booking->id,
+                'order_id'     => $order['id'],
+                'amount'       => $booking->amount,
+                'status'       => 'pending', // ✅ correct enum value
             ]);
 
-            return view('razorpay.pay', [
-                'booking'     => $booking,
-                'amount'      => $booking->amount * 100,
-                'orderId'     => $order['id'],
-                'razorpayKey' => $this->keyId,
-                'customer'    => [
-                    'name'    => $booking->user->name ?? '',
-                    'email'   => $booking->user->email ?? '',
-                    'contact' => $booking->user->phone ?? '',
+            // Return JSON with payment details & callback URL
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment order created successfully',
+                'data' => [
+                    'order_id'     => $order['id'],
+                    'amount'       => $booking->amount,
+                    'currency'     => 'INR',
+                    'razorpay_key' => $this->keyId,
+                    'callback_url' => url("/api/payments/callback"), // ✅ points to callback method
                 ],
-            ]);
+            ], 200);
         } catch (\Exception $e) {
-            Log::error('Razorpay order create failed', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create payment order',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -72,14 +79,16 @@ class BookingPaymentController extends Controller
         $attributes = [
             'razorpay_order_id'   => $request->input('razorpay_order_id'),
             'razorpay_payment_id' => $request->input('razorpay_payment_id'),
-            'razorpay_signature'  => $request->input('razorpay_signature')
+            'razorpay_signature'  => $request->input('razorpay_signature'),
         ];
 
         try {
+            // Verify Razorpay signature
             $this->api->utility->verifyPaymentSignature($attributes);
 
-            // Update DB
-            $payment = BookingPayment::where('razorpay_order_id', $attributes['razorpay_order_id'])->first();
+            // Find payment record by order_id
+            $payment = BookingPayment::where('order_id', $attributes['razorpay_order_id'])->first();
+
             if ($payment) {
                 $payment->status = 'paid';
                 $payment->razorpay_payment_id = $attributes['razorpay_payment_id'];
@@ -90,9 +99,21 @@ class BookingPaymentController extends Controller
                 }
             }
 
-            return view('razorpay-success', ['payment' => $payment]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment verified successfully',
+                'data'    => [
+                    'order_id'   => $attributes['razorpay_order_id'],
+                    'payment_id' => $attributes['razorpay_payment_id'],
+                    'status'     => 'paid',
+                ],
+            ], 200);
         } catch (\Exception $e) {
-            return view('razorpay-failure', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment verification failed',
+                'error'   => $e->getMessage(),
+            ], 400);
         }
     }
 
