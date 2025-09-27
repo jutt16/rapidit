@@ -102,18 +102,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/static/{slug}', [StaticPageController::class, 'show']);
 });
 
-// Public endpoints (Razorpay will call / redirect)
-// Route::get('/bookings/{booking}/pay', [BookingPaymentController::class, 'pay']);
-// Route::get('/payments/callback', [BookingPaymentController::class, 'callback'])->name('payments.callback');
-// Route::post('/payments/webhook', [BookingPaymentController::class, 'webhook'])->name('payments.webhook');
-
 Route::prefix('bookings/{id}')->group(function () {
     Route::post('/pay', [BookingPaymentController::class, 'pay']);       // create payment link
     Route::post('/cancel', [BookingPaymentController::class, 'cancel']); // cancel payment
 });
 
-// Razorpay callback (must be POST)
+// Razorpay callback (client redirect)
 Route::post('/payments/callback', [BookingPaymentController::class, 'callback']);
+
+// Razorpay webhook (server-to-server)
+Route::post('/payments/webhook', [BookingPaymentController::class, 'webhook']);
 
 // Get booking payment status
 Route::get('/bookings/{booking}/status', [BookingPaymentController::class, 'status']);

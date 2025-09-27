@@ -29,7 +29,7 @@ class BookingPaymentController extends Controller
     {
         try {
             $booking = Booking::findOrFail($id);
-            $amount = $booking->amount * 100; // Razorpay needs paise
+            $amount = $booking->amount * 100; // Razorpay requires paise
 
             $link = $this->api->paymentLink->create([
                 'amount' => $amount,
@@ -45,11 +45,10 @@ class BookingPaymentController extends Controller
                     'email' => true,
                 ],
                 'callback_url' => url("/api/payments/callback"),
-                'callback_method' => 'post', // ✅ must be post
+                'callback_method' => 'post',
             ]);
 
-            // store in DB
-            $payment = BookingPayment::create([
+            BookingPayment::create([
                 'booking_id'           => $booking->id,
                 'razorpay_link_id'     => $link['id'],
                 'razorpay_link_status' => $link['status'],
@@ -82,23 +81,55 @@ class BookingPaymentController extends Controller
      */
     public function callback(Request $request)
     {
-        $razorpayPaymentId = $request->get('razorpay_payment_id');
-        $razorpayLinkId    = $request->get('razorpay_payment_link_id');
-        $razorpayStatus    = $request->get('razorpay_payment_link_status');
+        return $this->handlePaymentUpdate($request->all(), 'callback');
+    }
+
+    /**
+     * Razorpay Webhook (POST).
+     */
+    public function webhook(Request $request)
+    {
+        // Verify signature (for security)
+        $payload    = $request->getContent();
+        $signature  = $request->header('X-Razorpay-Signature');
+        $secret     = env('RAZORPAY_WEBHOOK_SECRET');
 
         try {
+            $this->api->utility->verifyWebhookSignature($payload, $signature, $secret);
+        } catch (\Exception $e) {
+            Log::error("Razorpay Webhook Signature Verification Failed: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Invalid signature'], 400);
+        }
+
+        return $this->handlePaymentUpdate($request->all(), 'webhook');
+    }
+
+    /**
+     * Common handler for callback & webhook.
+     */
+    private function handlePaymentUpdate($data, $source = 'system')
+    {
+        try {
+            $razorpayPaymentId = $data['razorpay_payment_id'] ?? null;
+            $razorpayLinkId    = $data['razorpay_payment_link_id'] ?? null;
+            $razorpayStatus    = $data['razorpay_payment_link_status'] ?? null;
+
+            if (!$razorpayLinkId) {
+                return response()->json(['success' => false, 'message' => 'Missing link id'], 400);
+            }
+
             $payment = BookingPayment::where('razorpay_link_id', $razorpayLinkId)->first();
 
             if (!$payment) {
                 return response()->json(['success' => false, 'message' => 'Payment record not found'], 404);
             }
 
-            // fetch real payment link status from Razorpay for safety
+            // Fetch from Razorpay API for latest status
             $link = $this->api->paymentLink->fetch($razorpayLinkId);
 
             if ($link && $link['status'] === 'paid') {
                 $payment->update([
-                    'razorpay_payment_id' => $razorpayPaymentId,
+                    'razorpay_payment_id'  => $razorpayPaymentId,
                     'razorpay_link_status' => 'paid',
                     'status'               => 'paid',
                 ]);
@@ -107,35 +138,24 @@ class BookingPaymentController extends Controller
                     $payment->booking->update(['status' => 'confirmed']);
                 }
 
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Payment successful',
-                    'data'    => [
-                        'booking_id' => $payment->booking_id,
-                        'status'     => 'paid',
-                    ]
-                ]);
+                Log::info("Payment successful via {$source}", $data);
+
+                return response()->json(['success' => true, 'message' => 'Payment successful']);
             }
 
-            // otherwise failed/expired/cancelled
+            // Failed / expired / cancelled
             $payment->update([
                 'razorpay_link_status' => $razorpayStatus,
-                'status'               => $razorpayStatus,
+                'status'               => $razorpayStatus ?? 'failed',
             ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment not completed',
-                'status'  => $razorpayStatus,
-            ]);
+            Log::warning("Payment not completed via {$source}", $data);
+
+            return response()->json(['success' => false, 'message' => 'Payment not completed']);
         } catch (\Exception $e) {
-            Log::error('Razorpay Callback Error: ' . $e->getMessage());
+            Log::error("Razorpay {$source} Error: " . $e->getMessage());
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Callback error',
-                'error'   => $e->getMessage(),
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Payment update error', 'error' => $e->getMessage()], 500);
         }
     }
 
