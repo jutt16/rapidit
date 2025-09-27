@@ -32,40 +32,51 @@ class BookingPaymentController extends Controller
         try {
             $booking = Booking::findOrFail($id);
 
-            // Amount in paise (Razorpay works in INR paise, so multiply by 100)
+            // Amount in paise
             $amount = $booking->amount * 100;
 
-            // Create Razorpay order
-            $order = $this->api->order->create([
-                'receipt'  => uniqid('rcpt_'),
-                'amount'   => $amount,
+            // Create Payment Link
+            $link = $this->api->paymentLink->create([
+                'amount' => $amount,
                 'currency' => 'INR',
+                'description' => 'Booking Payment #' . $booking->id,
+                'customer' => [
+                    'name' => $booking->user->name ?? 'Customer',
+                    'email' => $booking->user->email ?? null,
+                    'contact' => $booking->user->phone ?? null,
+                ],
+                'notify' => [
+                    'sms' => true,
+                    'email' => true,
+                ],
+                'callback_url' => url("/api/payments/callback"),
+                'callback_method' => 'post',
             ]);
 
             // Store payment record
             $payment = BookingPayment::create([
-                'booking_id'   => $booking->id,
-                'order_id'     => $order['id'],
-                'amount'       => $booking->amount,
-                'status'       => 'pending', // ✅ correct enum value
+                'booking_id'        => $booking->id,
+                'razorpay_link_id'  => $link['id'],
+                'amount'            => $booking->amount,
+                'status'            => 'pending',
             ]);
 
-            // Return JSON with payment details & callback URL
+            // Return JSON with payment link
             return response()->json([
                 'success' => true,
-                'message' => 'Payment order created successfully',
+                'message' => 'Payment link created successfully',
                 'data' => [
-                    'order_id'     => $order['id'],
-                    'amount'       => $booking->amount,
-                    'currency'     => 'INR',
-                    'razorpay_key' => $this->keyId,
-                    'callback_url' => url("/api/payments/callback"), // ✅ points to callback method
+                    'link_id'       => $link['id'],
+                    'payment_url'   => $link['short_url'],   // ✅ this is the clickable payment URL
+                    'amount'        => $booking->amount,
+                    'currency'      => 'INR',
+                    'callback_url'  => url("/api/payments/callback"),
                 ],
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create payment order',
+                'message' => 'Failed to create payment link',
                 'error'   => $e->getMessage(),
             ], 500);
         }
