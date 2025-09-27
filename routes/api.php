@@ -106,7 +106,6 @@ Route::middleware('auth:sanctum')->group(function () {
 // Route::get('/bookings/{booking}/pay', [BookingPaymentController::class, 'pay']);
 // Route::get('/payments/callback', [BookingPaymentController::class, 'callback'])->name('payments.callback');
 // Route::post('/payments/webhook', [BookingPaymentController::class, 'webhook'])->name('payments.webhook');
-use App\Http\Controllers\Api\BookingPaymentController;
 
 Route::prefix('bookings/{id}')->group(function () {
     Route::post('/pay', [BookingPaymentController::class, 'pay']);       // create payment link
