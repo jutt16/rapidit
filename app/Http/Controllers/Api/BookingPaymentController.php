@@ -45,7 +45,7 @@ class BookingPaymentController extends Controller
                     'email' => true,
                 ],
                 'callback_url' => url("/api/payments/callback"),
-                'callback_method' => 'post',
+                // 'callback_method' => 'post',
             ]);
 
             BookingPayment::create([
