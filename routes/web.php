@@ -82,3 +82,6 @@ Route::post('razorpay-verify', [RazorpayPaymentController::class, 'verifyPayment
 
 Route::post('razorpay-callback/{payment_data}', [RazorpayPaymentController::class, 'handleCallback'])
     ->name('payments.callback');
+
+Route::get('/razorpay/status/{booking}', [RazorpayPaymentController::class, 'status'])
+    ->name('razorpay.status');
