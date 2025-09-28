@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StaticPageController;
 use App\Http\Controllers\Admin\SupportController;
+use App\Http\Controllers\RazorpayPaymentController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -72,3 +73,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     });
 });
+
+Route::get('razorpay-payment/{id}', [RazorpayPaymentController::class, 'index'])
+    ->name('razorpay.pay');
+
+Route::post('razorpay-verify', [RazorpayPaymentController::class, 'verifyPayment'])
+    ->name('razorpay.verify');
+
+Route::post('razorpay-callback/{payment_data}', [RazorpayPaymentController::class, 'handleCallback'])
+    ->name('payments.callback');

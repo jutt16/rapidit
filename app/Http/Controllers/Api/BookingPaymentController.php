@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\BookingPayment;
+use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 use Razorpay\Api\Api;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class BookingPaymentController extends Controller
 {
@@ -17,166 +21,165 @@ class BookingPaymentController extends Controller
 
     public function __construct()
     {
-        $this->keyId = env('RAZORPAY_KEY_ID');
-        $this->keySecret = env('RAZORPAY_KEY_SECRET');
+        $this->keyId = config('services.razorpay.key_id', env('RAZORPAY_KEY_ID'));
+        $this->keySecret = config('services.razorpay.key_secret', env('RAZORPAY_KEY_SECRET'));
         $this->api = new Api($this->keyId, $this->keySecret);
     }
 
     /**
-     * Create a Razorpay Payment Link for a booking.
+     * Initiate payment for a booking.
+     * If booking->payment_method == 'cod' -> create record (status pending).
+     * If 'razorpay' -> create Payment Link, return URL.
      */
-    public function pay(Request $request, $id)
+    public function pay($bookingId)
     {
-        try {
-            $booking = Booking::findOrFail($id);
-            $amount = $booking->amount * 100; // Razorpay requires paise
+        $booking = Booking::findOrFail($bookingId);
 
-            $link = $this->api->paymentLink->create([
-                'amount' => $amount,
-                'currency' => 'INR',
-                'description' => "Payment for Booking #{$booking->id}",
-                'customer' => [
-                    'name'  => $booking->user->name ?? 'Customer',
-                    'email' => $booking->user->email ?? 'noemail@example.com',
-                    'contact' => $booking->user->phone ?? '9999999999',
-                ],
-                'notify' => [
-                    'sms' => true,
-                    'email' => true,
-                ],
-                'callback_url' => url("/api/payments/callback"),
-                // 'callback_method' => 'post',
-            ]);
+        $api = new \Razorpay\Api\Api(env('RAZORPAY_KEY'), env('RAZORPAY_SECRET'));
+        $order = $api->order->create([
+            'receipt' => 'order_rcptid_' . $booking->id,
+            'amount' => $booking->amount * 100, // paise
+            'currency' => 'INR',
+        ]);
 
-            BookingPayment::create([
-                'booking_id'           => $booking->id,
-                'razorpay_link_id'     => $link['id'],
-                'razorpay_link_status' => $link['status'],
-                'amount'               => $booking->amount,
-                'status'               => 'pending',
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Payment link created successfully',
-                'data' => [
-                    'payment_link_id'  => $link['id'],
-                    'payment_link_url' => $link['short_url'],
-                    'status'           => 'pending',
-                ]
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Razorpay Pay Error: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create payment link',
-                'error'   => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Razorpay callback (POST).
-     */
-    public function callback(Request $request)
-    {
-        return $this->handlePaymentUpdate($request->all(), 'callback');
-    }
-
-    /**
-     * Razorpay Webhook (POST).
-     */
-    public function webhook(Request $request)
-    {
-        // Verify signature (for security)
-        $payload    = $request->getContent();
-        $signature  = $request->header('X-Razorpay-Signature');
-        $secret     = env('RAZORPAY_WEBHOOK_SECRET');
-
-        try {
-            $this->api->utility->verifyWebhookSignature($payload, $signature, $secret);
-        } catch (\Exception $e) {
-            Log::error("Razorpay Webhook Signature Verification Failed: " . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Invalid signature'], 400);
-        }
-
-        return $this->handlePaymentUpdate($request->all(), 'webhook');
-    }
-
-    /**
-     * Common handler for callback & webhook.
-     */
-    private function handlePaymentUpdate($data, $source = 'system')
-    {
-        try {
-            $razorpayPaymentId = $data['razorpay_payment_id'] ?? null;
-            $razorpayLinkId    = $data['razorpay_payment_link_id'] ?? null;
-            $razorpayStatus    = $data['razorpay_payment_link_status'] ?? null;
-
-            if (!$razorpayLinkId) {
-                return response()->json(['success' => false, 'message' => 'Missing link id'], 400);
-            }
-
-            $payment = BookingPayment::where('razorpay_link_id', $razorpayLinkId)->first();
-
-            if (!$payment) {
-                return response()->json(['success' => false, 'message' => 'Payment record not found'], 404);
-            }
-
-            // Fetch from Razorpay API for latest status
-            $link = $this->api->paymentLink->fetch($razorpayLinkId);
-
-            if ($link && $link['status'] === 'paid') {
-                $payment->update([
-                    'razorpay_payment_id'  => $razorpayPaymentId,
-                    'razorpay_link_status' => 'paid',
-                    'status'               => 'paid',
-                ]);
-
-                if ($payment->booking) {
-                    $payment->booking->update(['status' => 'confirmed']);
-                }
-
-                Log::info("Payment successful via {$source}", $data);
-
-                return response()->json(['success' => true, 'message' => 'Payment successful']);
-            }
-
-            // Failed / expired / cancelled
-            $payment->update([
-                'razorpay_link_status' => $razorpayStatus,
-                'status'               => $razorpayStatus ?? 'failed',
-            ]);
-
-            Log::warning("Payment not completed via {$source}", $data);
-
-            return response()->json(['success' => false, 'message' => 'Payment not completed']);
-        } catch (\Exception $e) {
-            Log::error("Razorpay {$source} Error: " . $e->getMessage());
-
-            return response()->json(['success' => false, 'message' => 'Payment update error', 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Cancel payment manually.
-     */
-    public function cancel(Request $request, $id)
-    {
-        $payment = BookingPayment::where('booking_id', $id)->latest()->first();
-        if ($payment) {
-            $payment->update(['status' => 'cancelled']);
-        }
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Payment cancelled',
+        return view('razorpay.pay', [
+            'booking' => $booking,
+            'amount' => $booking->amount * 100,
+            'orderId' => $order['id'],
+            'razorpayKey' => env('RAZORPAY_KEY'),
+            'customer' => [
+                'name' => $booking->user->name,
+                'email' => $booking->user->email,
+                'contact' => $booking->user->phone,
+            ]
         ]);
     }
 
     /**
-     * Get payment status for a booking.
+     * Callback (user redirect) - GET. Razorpay will redirect the WebView to this URL with query params:
+     * razorpay_payment_id, razorpay_payment_link_id, razorpay_payment_link_reference_id,
+     * razorpay_payment_link_status, razorpay_signature
+     */
+    public function callback(Request $request)
+    {
+        Log::info('data',$request->all());
+        $api = new \Razorpay\Api\Api(
+            env('RAZORPAY_KEY_ID'),
+            env('RAZORPAY_KEY_SECRET')
+        );
+
+        $attributes = [
+            'razorpay_order_id' => $request->input('razorpay_order_id'),
+            'razorpay_payment_id' => $request->input('razorpay_payment_id'),
+            'razorpay_signature' => $request->input('razorpay_signature')
+        ];
+
+        try {
+            $api->utility->verifyPaymentSignature($attributes);
+
+            // Update DB
+            $payment = BookingPayment::where('razorpay_order_id', $request->input('razorpay_order_id'))->first();
+            if ($payment) {
+                $payment->status = 'paid';
+                $payment->razorpay_payment_id = $request->input('razorpay_payment_id');
+                $payment->save();
+            }
+
+            return view('razorpay-success', ['payment' => $payment]);
+        } catch (\Exception $e) {
+            return view('razorpay-failure', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Webhook endpoint for server->server events.
+     * Verify header X-Razorpay-Signature using RAZORPAY_WEBHOOK_SECRET.
+     */
+    public function webhook(Request $request)
+    {
+        $rawBody = $request->getContent();
+        $signature = $request->header('X-Razorpay-Signature') ?? $request->header('x-razorpay-signature');
+
+        $webhookSecret = env('RAZORPAY_WEBHOOK_SECRET');
+        if (!$webhookSecret) {
+            Log::error('Webhook secret not configured');
+            return response()->json(['success' => false, 'message' => 'Webhook secret not configured'], 500);
+        }
+
+        $expected = hash_hmac('sha256', $rawBody, $webhookSecret);
+        if (!hash_equals($expected, (string)$signature)) {
+            Log::warning('Invalid webhook signature', ['expected' => $expected, 'received' => $signature]);
+            return response()->json(['success' => false, 'message' => 'Invalid signature'], 400);
+        }
+
+        $payload = json_decode($rawBody, true);
+        $event = $payload['event'] ?? null;
+        $data = $payload['payload'] ?? [];
+
+        try {
+            // payment_link.* events
+            if (str_starts_with($event, 'payment_link.')) {
+                $entity = $data['payment_link']['entity'] ?? null;
+                if ($entity) {
+                    $linkId = $entity['id'] ?? null;
+                    $status = $entity['status'] ?? null;
+                    $payments = $entity['payments'] ?? [];
+                    $paymentId = null;
+                    if (!empty($payments) && isset($payments[0]['id'])) {
+                        $paymentId = $payments[0]['id'];
+                    }
+
+                    $record = BookingPayment::where('razorpay_link_id', $linkId)->first();
+                    if ($record) {
+                        // idempotent update
+                        $record->update([
+                            'razorpay_link_status' => $status,
+                            'razorpay_payment_id' => $paymentId ?? $record->razorpay_payment_id,
+                            'status' => $status === 'paid' ? 'paid' : ($status === 'expired' ? 'expired' : $record->status),
+                            'meta' => array_merge($record->meta ?? [], $entity),
+                        ]);
+                        if ($status === 'paid' && $record->booking) {
+                            $record->booking->update(['status' => 'confirmed']);
+                        }
+                    }
+                }
+            }
+
+            // payment.* events (fallback)
+            if (str_starts_with($event, 'payment.')) {
+                $entity = $data['payment']['entity'] ?? null;
+                if ($entity) {
+                    $paymentId = $entity['id'] ?? null;
+                    $status = $entity['status'] ?? null; // captured, failed, authorized...
+                    // try find by payment id
+                    $record = BookingPayment::where('razorpay_payment_id', $paymentId)->first();
+                    if (!$record) {
+                        // maybe link id is inside notes
+                        $linkId = $entity['notes']['payment_link_id'] ?? null;
+                        $record = BookingPayment::where('razorpay_link_id', $linkId)->first();
+                    }
+                    if ($record) {
+                        $record->update([
+                            'razorpay_payment_id' => $paymentId,
+                            'status' => $status === 'captured' ? 'paid' : ($status === 'failed' ? 'failed' : $record->status),
+                            'meta' => array_merge($record->meta ?? [], $entity),
+                        ]);
+                        if ($status === 'captured' && $record->booking) {
+                            $record->booking->update(['status' => 'confirmed']);
+                        }
+                    }
+                }
+            }
+
+            return response()->json(['success' => true], 200);
+        } catch (\Exception $e) {
+            Log::error('Webhook processing error: ' . $e->getMessage(), ['payload' => $payload]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get payment status for a booking (for frontend polling)
      */
     public function status(Request $request, Booking $booking)
     {
@@ -187,9 +190,6 @@ class BookingPaymentController extends Controller
 
         $payment = BookingPayment::where('booking_id', $booking->id)->latest()->first();
 
-        return response()->json([
-            'success' => true,
-            'data'    => $payment,
-        ]);
+        return response()->json(['success' => true, 'data' => $payment]);
     }
 }
