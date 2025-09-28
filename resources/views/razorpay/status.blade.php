@@ -73,7 +73,7 @@
                             </li>
                             <li class="list-group-item d-flex justify-content-between">
                                 <span class="small-meta">Amount</span>
-                                <strong>₹ {{ number_format($booking->amount, 2) }}</strong>
+                                <strong>₹ {{ number_format($booking->total_amount, 2) }}</strong>
                             </li>
                         </ul>
                     </div>
