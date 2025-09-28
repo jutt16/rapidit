@@ -37,7 +37,8 @@ class RazorpayPaymentController extends Controller
             ->first();
 
         if ($existingPayment) {
-            return redirect()->back()->with("error", "Payment already completed");
+            // ✅ if already paid, go directly to status page
+            return redirect()->route('razorpay.status', $bookingId);
         }
 
         // Create Razorpay Order
@@ -60,96 +61,89 @@ class RazorpayPaymentController extends Controller
     }
 
     /**
-     * Handle Razorpay payment callback - Webhook style
+     * Handle Razorpay payment callback
      */
     public function handleCallback(Request $request, $payment_data): RedirectResponse
     {
         try {
             $bookingId = base64_decode($payment_data);
-            $booking = Booking::findOrFail($bookingId);
+            $booking   = Booking::findOrFail($bookingId);
 
             $input = $request->all();
             Log::info('Razorpay callback received:', $input);
 
-            // Required parameters for verification
             if (empty($input['razorpay_payment_id']) || empty($input['razorpay_signature'])) {
                 throw new Exception('Missing payment parameters');
             }
 
-            // For callback, we might not have order_id, so we need to handle it differently
             $attributes = [
                 'razorpay_payment_id' => $input['razorpay_payment_id'],
-                'razorpay_order_id' => $input['razorpay_order_id'] ?? null,
-                'razorpay_signature' => $input['razorpay_signature']
+                'razorpay_order_id'   => $input['razorpay_order_id'] ?? null,
+                'razorpay_signature'  => $input['razorpay_signature']
             ];
 
-            // Verify signature if we have order_id
             if (!empty($input['razorpay_order_id'])) {
                 $this->razorpayApi->utility->verifyPaymentSignature($attributes);
             }
 
-            // Fetch payment details
             $payment = $this->razorpayApi->payment->fetch($input['razorpay_payment_id']);
 
             if ($payment->status === 'captured') {
-                // Create or update booking payment record
                 BookingPayment::updateOrCreate(
                     ['booking_id' => $bookingId],
                     [
-                        'payment_method' => 'razorpay',
-                        'amount' => $booking->amount,
+                        'payment_method'      => 'razorpay',
+                        'amount'              => $booking->amount,
                         'razorpay_payment_id' => $input['razorpay_payment_id'],
-                        'razorpay_order_id' => $input['razorpay_order_id'] ?? null,
-                        'razorpay_signature' => $input['razorpay_signature'],
-                        'status' => 'paid',
-                        'meta' => json_encode($payment->toArray())
+                        'razorpay_order_id'   => $input['razorpay_order_id'] ?? null,
+                        'razorpay_signature'  => $input['razorpay_signature'],
+                        'status'              => 'paid',
+                        'meta'                => json_encode($payment->toArray())
                     ]
                 );
 
-                // Update booking status
                 $booking->update(['payment_status' => 'paid']);
 
-                return redirect()->route('razorpay.pay', $bookingId)
-                    ->with('success', 'Payment completed successfully!');
+                // ✅ Redirect to new status page
+                return redirect()->route('razorpay.status', $bookingId);
             } else {
-                // Payment failed
                 BookingPayment::create([
-                    'booking_id' => $bookingId,
-                    'payment_method' => 'razorpay',
-                    'amount' => $booking->amount,
+                    'booking_id'          => $bookingId,
+                    'payment_method'      => 'razorpay',
+                    'amount'              => $booking->amount,
                     'razorpay_payment_id' => $input['razorpay_payment_id'],
-                    'razorpay_order_id' => $input['razorpay_order_id'] ?? null,
-                    'razorpay_signature' => $input['razorpay_signature'],
-                    'status' => 'failed',
-                    'meta' => json_encode($payment->toArray())
+                    'razorpay_order_id'   => $input['razorpay_order_id'] ?? null,
+                    'razorpay_signature'  => $input['razorpay_signature'],
+                    'status'              => 'failed',
+                    'meta'                => json_encode($payment->toArray())
                 ]);
 
-                return redirect()->route('razorpay.pay', $bookingId)
-                    ->with('error', 'Payment failed. Status: ' . $payment->status);
+                return redirect()->route('razorpay.status', $bookingId);
             }
         } catch (Exception $e) {
             Log::error('Razorpay callback error: ' . $e->getMessage());
 
-            return redirect()->route('razorpay.pay', base64_decode($payment_data))
+            // ✅ always show status page, even on error
+            return redirect()->route('razorpay.status', base64_decode($payment_data))
                 ->with('error', 'Payment verification failed: ' . $e->getMessage());
         }
     }
 
     /**
-     * Manual verification method (fallback)
+     * Manual verification method
      */
     public function verifyPayment(Request $request): RedirectResponse
     {
         try {
-            $input = $request->all();
+            $input     = $request->all();
             $bookingId = $request->booking_id;
 
             Log::info('Manual verification:', $input);
 
             $attributes = [
                 'razorpay_payment_id' => $input['razorpay_payment_id'],
-                'razorpay_order_id' => $input['razorpay_order_id'],
-                'razorpay_signature' => $input['razorpay_signature']
+                'razorpay_order_id'   => $input['razorpay_order_id'],
+                'razorpay_signature'  => $input['razorpay_signature']
             ];
 
             $this->razorpayApi->utility->verifyPaymentSignature($attributes);
@@ -157,22 +151,35 @@ class RazorpayPaymentController extends Controller
             $booking = Booking::findOrFail($bookingId);
 
             BookingPayment::create([
-                'booking_id' => $bookingId,
-                'payment_method' => 'razorpay',
-                'amount' => $booking->amount,
+                'booking_id'          => $bookingId,
+                'payment_method'      => 'razorpay',
+                'amount'              => $booking->amount,
                 'razorpay_payment_id' => $input['razorpay_payment_id'],
-                'razorpay_order_id' => $input['razorpay_order_id'],
-                'razorpay_signature' => $input['razorpay_signature'],
-                'status' => 'paid',
+                'razorpay_order_id'   => $input['razorpay_order_id'],
+                'razorpay_signature'  => $input['razorpay_signature'],
+                'status'              => 'paid',
             ]);
 
             $booking->update(['payment_status' => 'paid']);
 
-            return redirect()->route('razorpay.pay', $bookingId)
-                ->with('success', 'Payment verified successfully!');
+            // ✅ Redirect to status page after manual verification
+            return redirect()->route('razorpay.status', $bookingId);
         } catch (Exception $e) {
             Log::error('Manual verification error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Payment verification failed: ' . $e->getMessage());
+            return redirect()->route('razorpay.status', $request->booking_id)
+                ->with('error', 'Payment verification failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Show payment status page
+     */
+    public function status($bookingId): View
+    {
+        $booking = Booking::with('user')->findOrFail($bookingId);
+        $payment = BookingPayment::where('booking_id', $bookingId)->latest()->first();
+        $status  = $payment && $payment->status === 'paid' ? 'success' : 'failed';
+
+        return view('razorpay.status', compact('booking', 'payment', 'status'));
     }
 }
