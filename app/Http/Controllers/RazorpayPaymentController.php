@@ -109,7 +109,7 @@ class RazorpayPaymentController extends Controller
                 // Update booking status
                 $booking->update(['payment_status' => 'paid']);
 
-                return redirect()->route('razorpay.pay.show', $bookingId)
+                return redirect()->route('razorpay.pay', $bookingId)
                     ->with('success', 'Payment completed successfully!');
             } else {
                 // Payment failed
@@ -168,7 +168,7 @@ class RazorpayPaymentController extends Controller
 
             $booking->update(['payment_status' => 'paid']);
 
-            return redirect()->route('razorpay.pay.show', $bookingId)
+            return redirect()->route('razorpay.pay', $bookingId)
                 ->with('success', 'Payment verified successfully!');
         } catch (Exception $e) {
             Log::error('Manual verification error: ' . $e->getMessage());
