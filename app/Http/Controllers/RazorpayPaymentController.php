@@ -102,7 +102,7 @@ class RazorpayPaymentController extends Controller
                     ]
                 );
 
-                $booking->update(['payment_status' => 'paid']);
+                $booking->update(['status' => 'confirmed']);
 
                 // ✅ Redirect to new status page
                 return redirect()->route('razorpay.status', $bookingId);
