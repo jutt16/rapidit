@@ -33,7 +33,7 @@ class RazorpayPaymentController extends Controller
 
         // Check if payment already exists and is successful
         $existingPayment = BookingPayment::where('booking_id', $bookingId)
-            ->where('status', 'success')
+            ->where('status', 'paid')
             ->first();
 
         if ($existingPayment) {
@@ -101,7 +101,7 @@ class RazorpayPaymentController extends Controller
                         'razorpay_payment_id' => $input['razorpay_payment_id'],
                         'razorpay_order_id' => $input['razorpay_order_id'] ?? null,
                         'razorpay_signature' => $input['razorpay_signature'],
-                        'status' => 'success',
+                        'status' => 'paid',
                         'meta' => json_encode($payment->toArray())
                     ]
                 );
@@ -163,7 +163,7 @@ class RazorpayPaymentController extends Controller
                 'razorpay_payment_id' => $input['razorpay_payment_id'],
                 'razorpay_order_id' => $input['razorpay_order_id'],
                 'razorpay_signature' => $input['razorpay_signature'],
-                'status' => 'success',
+                'status' => 'paid',
             ]);
 
             $booking->update(['payment_status' => 'paid']);
