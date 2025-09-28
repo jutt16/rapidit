@@ -66,12 +66,12 @@
                                 <strong>Phone:</strong> <span>{{ $booking->user->phone ?? 'N/A' }}</span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between">
-                                <strong>Amount:</strong> <span><b>₹ {{ number_format($booking->amount, 2) }}</b></span>
+                                <strong>Amount:</strong> <span><b>₹ {{ number_format($booking->total_amount, 2) }}</b></span>
                             </li>
                         </ul>
 
                         {{-- Payment Button --}}
-                        <button id="rzp-button" class="btn btn-razorpay w-100">Confirm & Pay ₹{{ $booking->amount }}</button>
+                        <button id="rzp-button" class="btn btn-razorpay w-100">Confirm & Pay ₹{{ $booking->total_amount }}</button>
 
                         {{-- Manual verification form (hidden) --}}
                         <form id="verification-form" action="{{ route('razorpay.verify') }}" method="POST" style="display: none;">
@@ -91,7 +91,7 @@
     <script>
         const options = {
             "key": "{{ env('RAZORPAY_KEY_ID') }}",
-            "amount": "{{ $booking->amount * 100 }}", // in paise
+            "amount": "{{ $booking->total_amount * 100 }}", // in paise
             "currency": "INR",
             "name": "RapidIt.in",
             "description": "Payment for Booking #{{ $booking->id }}",
