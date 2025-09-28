@@ -115,9 +115,6 @@
                     @endif
 
                     <div class="d-flex justify-content-between mt-4">
-                        <a href="{{ route('bookings.show', $booking->id) }}" class="btn btn-outline-primary">
-                            View Booking
-                        </a>
 
                         @if(isset($status) && $status !== 'success')
                         <a href="{{ route('razorpay.pay', $booking->id) }}" class="btn btn-warning">
