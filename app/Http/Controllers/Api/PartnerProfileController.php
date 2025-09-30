@@ -33,6 +33,14 @@ class PartnerProfileController extends Controller
         try {
             $user = $request->user();
 
+            // ✅ Check if profile already exists
+            if ($user->partnerProfile()->exists()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Profile already exists. Please update instead of creating a new one.',
+                ], 409); // 409 Conflict
+            }
+
             // Validate input
             $validator = Validator::make($request->all(), [
                 'full_name' => 'required|string|max:255',
