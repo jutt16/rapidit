@@ -150,7 +150,7 @@ class PartnerProfileController extends Controller
     {
         try {
             $user = $request->user();
-            $profile = $user->partnerProfile;
+            $profile = $user->partnerProfile->firstOrFail();
 
             if (!$profile) {
                 return response()->json([
