@@ -46,7 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/partner/profiles', [PartnerProfileController::class, 'index']);
     Route::post('/partner/profile', [PartnerProfileController::class, 'store']);
     Route::get('/partner/profile', [PartnerProfileController::class, 'show']);
-    Route::put('/partner/profile', [PartnerProfileController::class, 'update']);
+    Route::post('/partner/profile/update', [PartnerProfileController::class, 'update']);
 
     Route::get('/user/profile', [UserProfileController::class, 'get']);
     Route::post('/user/profile', [UserProfileController::class, 'update']);
