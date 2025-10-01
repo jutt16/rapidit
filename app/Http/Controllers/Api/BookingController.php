@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\BookingRequest;
+use App\Models\BookingCancellationCharge;
 use App\Models\CookBooking;
 use App\Models\PartnerAvailability;
 use App\Models\PartnerProfile;
@@ -274,6 +275,58 @@ class BookingController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Booking rescheduled successfully.',
+            'data'    => $booking->fresh(),
+        ]);
+    }
+
+    public function cancel(Request $request, $id)
+    {
+        $user = $request->user();
+
+        $booking = Booking::with('service')->where('id', $id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        // prevent double cancel
+        if (in_array($booking->status, ['completed', 'cancelled'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This booking is already completed or cancelled.',
+            ], 422);
+        }
+
+        $requests = $booking->requests;
+        $accepted = $requests->where('status', 'accepted')->first();
+
+        if ($accepted) {
+            // ✅ Case 1: accepted request exists
+            $charge = $booking->service->cancellation_charges ?? 0;
+
+            if ($charge > 0) {
+                BookingCancellationCharge::create([
+                    'booking_id' => $booking->id,
+                    'user_id'    => $user->id,
+                    'amount'     => $charge,
+                ]);
+            }
+
+            // mark accepted one as cancelled
+            $accepted->update(['status' => 'cancelled']);
+
+            // mark others expired
+            $requests->where('id', '!=', $accepted->id)
+                ->each->update(['status' => 'expired']);
+
+            $booking->update(['status' => 'cancelled']);
+        } else {
+            // ✅ Case 2: no accepted → no charges
+            $requests->each->update(['status' => 'expired']);
+            $booking->update(['status' => 'cancelled']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Booking cancelled successfully.',
             'data'    => $booking->fresh(),
         ]);
     }

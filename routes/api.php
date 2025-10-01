@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\BookingPaymentController;
 use App\Http\Controllers\Api\BookingRequestController;
 use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\API\PartnerAvailabilityController;
+use App\Http\Controllers\Api\PartnerAvailabilityController;
 use App\Http\Controllers\Api\PartnerPreferenceController;
 use App\Http\Controllers\Api\PartnerProfileController;
 use App\Http\Controllers\Api\PartnerReviewController;
@@ -79,6 +79,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/booking-requests', [BookingRequestController::class, 'index']);
     Route::post('/booking-requests/{id}/accept', [BookingRequestController::class, 'accept']);
     Route::post('/booking-requests/{id}/reject', [BookingRequestController::class, 'reject']);
+
+    // Booking cancellation
+    Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
 
     // Payment routes
     // Initiate payment (COD or create razorpay link)
