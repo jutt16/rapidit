@@ -18,7 +18,8 @@ use App\Http\Controllers\Admin\SupportController;
 use App\Http\Controllers\RazorpayPaymentController;
 
 Route::get('/', function () {
-    return redirect()->route('admin.login');
+    // return redirect()->route('admin.login');
+    return view('home.index');
 })->name('login');
 
 Route::prefix('admin')->name('admin.')->group(function () {
