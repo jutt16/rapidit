@@ -22,4 +22,9 @@ class UserAddress extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function getFullAddressAttribute()
+    {
+        return "{$this->addressLine}, {$this->city}, {$this->state}, {$this->postalCode}";
+    }
 }

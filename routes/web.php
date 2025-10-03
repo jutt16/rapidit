@@ -4,6 +4,7 @@ use Illuminate\Routing\RouteGroup;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\CookPricingController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController;
@@ -35,6 +36,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', UserController::class);
 
         Route::resource('notifications', NotificationController::class);
+
+        Route::resource('bookings', BookingController::class);
+        
         Route::post('notifications/{notification}/resend', [NotificationController::class, 'resend'])->name('notifications.resend');
 
         Route::resource('banners', BannerController::class);
