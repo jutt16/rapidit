@@ -279,6 +279,27 @@ class BookingController extends Controller
         ]);
     }
 
+    public function completed($id)
+    {
+        $booking = Booking::where('id', $id)->first();
+        $hasAccepted = BookingRequest::where('booking_id', $booking->id)
+            ->where('status', 'accepted')
+            ->exists();
+        if ($hasAccepted) {
+            $booking->update(['status' => 'completed']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Booking is completed successfully.',
+                'data'    => $booking->fresh(),
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking is not accepted by any partner.',
+            ], 422);
+        }
+    }
+
     public function cancel(Request $request, $id)
     {
         $user = $request->user();
