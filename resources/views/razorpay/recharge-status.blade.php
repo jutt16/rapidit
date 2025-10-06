@@ -52,8 +52,16 @@
 
         @if($lastTxn)
             <p><strong>Transaction ID:</strong> {{ $lastTxn->transaction_id }}</p>
-            <p><strong>Amount:</strong> ₹{{ number_format($lastTxn->amount, 2) }}</p>
+            <p><strong>Amount:</strong> ₹{{ number_format($lastTxn->description, 2) }}</p>
             <p><strong>Status:</strong> {{ ucfirst($lastTxn->status) }}</p>
+            
+            @php
+                // extract text after '#' up to the closing parenthesis, e.g. "pay_RQI5uceEh3eZYd"
+                preg_match('/#([^)]*)/', $lastTxn->description ?? '', $matches);
+                $paymentId = $matches[1] ?? '';
+            @endphp
+
+            <p><strong>Payment ID:</strong> {{ $paymentId }}</p>
         @endif
 
         <a href="{{ url('/') }}" class="btn">Go Back</a>
