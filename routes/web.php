@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StaticPageController;
 use App\Http\Controllers\Admin\SupportController;
+use App\Http\Controllers\PartnerRechargeController;
 use App\Http\Controllers\RazorpayPaymentController;
 
 Route::get('/', function () {
@@ -90,3 +91,13 @@ Route::post('razorpay-callback/{payment_data}', [RazorpayPaymentController::clas
 
 Route::get('/razorpay/status/{booking}', [RazorpayPaymentController::class, 'status'])
     ->name('razorpay.status');
+
+Route::get('/partner/recharge/{id}', [PartnerRechargeController::class, 'index'])
+    ->name('recharge.pay');
+
+Route::post('/partner/recharge/callback/{user}', [PartnerRechargeController::class, 'handleCallback'])
+    ->name('recharge.callback');
+
+Route::get('/partner/recharge/status/{id}', [PartnerRechargeController::class, 'status'])
+    ->name('recharge.status');
+
