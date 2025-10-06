@@ -74,7 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::post('/bookings/create', [BookingController::class, 'store']);
     Route::post('/bookings/{id}/reschedule', [BookingController::class, 'reschedule']);
-    Route::post('/booking/{id}/completed', [BookingController::class,'complete']);
+    Route::post('/booking/{id}/completed', [BookingController::class,'completed']);
     Route::post('/bookings/{id}/mark-arrival', [BookingRequestController::class, 'markArrival']);
 
     // Booking Requests
