@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\StaticPageController;
 use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\UserAddressController;
 use App\Http\Controllers\Api\UserProfileController;
+use App\Http\Controllers\Api\WalletController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -84,6 +85,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Booking cancellation
     Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
+
+    Route::get('/wallet', [WalletController::class, 'show']);
 
     // Payment routes
     // Initiate payment (COD or create razorpay link)
