@@ -69,11 +69,11 @@ class BookingRequestController extends Controller
         }
 
         // ✅ Check partner wallet balance before accepting
-        if ($user->wallet_balance < 0) {
+        if ($user->wallet->balance < 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'Your wallet balance is negative. Please recharge before accepting new bookings.',
-                'current_balance' => $user->wallet_balance,
+                'current_balance' => $user->wallet->balance,
             ], 402); // 402 Payment Required
         }
 
