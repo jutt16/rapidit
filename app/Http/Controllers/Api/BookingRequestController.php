@@ -58,7 +58,7 @@ class BookingRequestController extends Controller
         $user = $request->user();
 
         $bookingRequest = BookingRequest::with('booking')
-            ->where('partner_id', $user->id) // only if belongs to this partner
+            ->where('partner_id', $user->id)
             ->findOrFail($id);
 
         if ($bookingRequest->status !== 'pending') {
@@ -68,24 +68,42 @@ class BookingRequestController extends Controller
             ], 422);
         }
 
-        // Mark this one accepted
+        $booking = $bookingRequest->booking;
+
+        // ✅ If payment method is wallet or prepaid, check wallet balance
+        if ($booking->payment_method === 'wallet') {
+            $walletBalance = $user->wallet_balance ?? 0; // assuming you store this in users table
+            $requiredAmount = $booking->total_amount ?? 0;
+
+            if ($walletBalance < $requiredAmount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insufficient wallet balance. Please recharge to accept this booking.',
+                    'required_amount' => $requiredAmount,
+                    'current_balance' => $walletBalance,
+                ], 402); // 402 Payment Required
+            }
+        }
+
+        // ✅ Mark this one accepted
         $bookingRequest->update(['status' => 'accepted']);
 
-        // Expire all other requests for this booking
+        // ✅ Expire all other pending requests
         BookingRequest::where('booking_id', $bookingRequest->booking_id)
             ->where('id', '!=', $bookingRequest->id)
             ->where('status', 'pending')
             ->update(['status' => 'expired']);
 
-        Booking::findOrFail($bookingRequest->booking_id)
-            ->update(['status' => 'accepted']);
+        // ✅ Update booking main status
+        $booking->update(['status' => 'accepted', 'partner_id' => $user->id]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Booking request accepted.',
-            'data'    => $bookingRequest->load('booking', 'partner'),
+            'message' => 'Booking request accepted successfully.',
+            'data' => $bookingRequest->load('booking', 'partner'),
         ]);
     }
+
 
     /**
      * Reject a booking request (partner only)
