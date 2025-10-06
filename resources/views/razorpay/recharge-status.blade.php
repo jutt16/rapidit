@@ -67,7 +67,11 @@
         @endphp
         <p><strong>Transaction ID:</strong> {{ $transactionId ?: 'N/A' }}</p>
         <p><strong>Amount:</strong> ₹{{ number_format($lastTxn->amount, 2) }}</p>
-        <p><strong>Status:</strong> {{ ucfirst($lastTxn->status) }}</p>
+        @if ($lastTxn)
+        <p><strong>Status:</strong> {{ ucfirst($lastTxn->status ?? 'Paid') }}</p>
+        @else
+        <p><strong>Status:</strong> Failed</p>
+        @endif
         @endif
 
         <a href="{{ url('/') }}" class="btn">Go Back</a>
