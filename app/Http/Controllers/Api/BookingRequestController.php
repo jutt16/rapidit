@@ -68,21 +68,13 @@ class BookingRequestController extends Controller
             ], 422);
         }
 
-        $booking = $bookingRequest->booking;
-
-        // ✅ If payment method is wallet or prepaid, check wallet balance
-        if ($booking->payment_method === 'wallet') {
-            $walletBalance = $user->wallet_balance ?? 0; // assuming you store this in users table
-            $requiredAmount = $booking->total_amount ?? 0;
-
-            if ($walletBalance < $requiredAmount) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Insufficient wallet balance. Please recharge to accept this booking.',
-                    'required_amount' => $requiredAmount,
-                    'current_balance' => $walletBalance,
-                ], 402); // 402 Payment Required
-            }
+        // ✅ Check partner wallet balance before accepting
+        if ($user->wallet_balance < 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your wallet balance is negative. Please recharge before accepting new bookings.',
+                'current_balance' => $user->wallet_balance,
+            ], 402); // 402 Payment Required
         }
 
         // ✅ Mark this one accepted
@@ -94,8 +86,9 @@ class BookingRequestController extends Controller
             ->where('status', 'pending')
             ->update(['status' => 'expired']);
 
-        // ✅ Update booking main status
-        $booking->update(['status' => 'accepted', 'partner_id' => $user->id]);
+        // ✅ Update booking status
+        Booking::findOrFail($bookingRequest->booking_id)
+            ->update(['status' => 'accepted', 'partner_id' => $user->id]);
 
         return response()->json([
             'success' => true,
