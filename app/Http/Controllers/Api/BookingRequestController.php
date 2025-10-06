@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\BookingRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class BookingRequestController extends Controller
 {
@@ -124,6 +125,40 @@ class BookingRequestController extends Controller
             'success' => true,
             'message' => 'Booking request rejected.',
             'data'    => $bookingRequest->load('booking', 'partner'),
+        ]);
+    }
+
+    /**
+     * Mark arrival time for a booking using its booking_id.
+     */
+    public function markArrival(Request $request, $booking_id)
+    {
+        // Retrieve booking request by booking_id
+        $bookingRequest = BookingRequest::where('booking_id', $booking_id)->first();
+
+        if (!$bookingRequest) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking request not found for this booking ID.',
+            ], 404);
+        }
+
+        // Optional: restrict only the assigned partner to mark arrival
+        if (auth()->id() !== $bookingRequest->partner_id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Update arrival time
+        $bookingRequest->arrival_time = $request->input('arrival_time', Carbon::now());
+        $bookingRequest->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Arrival time marked successfully.',
+            'data' => [
+                'booking_id' => $bookingRequest->booking_id,
+                'arrival_time' => $bookingRequest->arrival_time->format('Y-m-d H:i:s'),
+            ],
         ]);
     }
 }

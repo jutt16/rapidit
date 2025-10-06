@@ -11,6 +11,11 @@ class BookingRequest extends Model
         'booking_id',
         'partner_id',
         'status',
+        'arrival_time'
+    ];
+
+    protected $casts = [
+        'arrival_time' => 'datetime',
     ];
 
     public function booking(): BelongsTo
