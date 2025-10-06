@@ -115,7 +115,7 @@ class PartnerRechargeController extends Controller
         $lastTxn = $wallet->transactions()->latest()->first();
         $status = $lastTxn && $lastTxn->type === 'credit' ? 'success' : 'failed';
 
-        dd($lastTxn);
+        // dd($lastTxn);
 
         return view('razorpay.recharge-status', compact('user', 'wallet', 'lastTxn', 'status'));
     }
