@@ -48,7 +48,7 @@
         @endif
 
         <p><strong>User:</strong> {{ $user->name }}</p>
-        <p><strong>Wallet Balance:</strong> ₹{{ number_format($user->wallet_balance, 2) }}</p>
+        <p><strong>Wallet Balance:</strong> ₹{{ number_format($wallet->balance, 2) }}</p>
 
         @if($lastTxn)
             <p><strong>Transaction ID:</strong> {{ $lastTxn->transaction_id }}</p>
