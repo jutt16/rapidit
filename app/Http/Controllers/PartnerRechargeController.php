@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Wallet;
-use App\Models\WalletTransaction;
+use App\Models\Recharge;
 use Illuminate\Http\Request;
 use Razorpay\Api\Api;
 use Exception;
@@ -36,13 +36,23 @@ class PartnerRechargeController extends Controller
         try {
             $orderData = [
                 'receipt' => 'wallet_recharge_' . $user->id . '_' . now()->timestamp,
-                'amount' => $amount * 100, // paise
+                'amount' => $amount * 100, // amount in paise
                 'currency' => 'INR',
                 'payment_capture' => 1
             ];
 
             $razorpayOrder = $this->razorpayApi->order->create($orderData);
             $orderId = $razorpayOrder['id'];
+
+            // ✅ Record initial recharge request
+            Recharge::create([
+                'user_id' => $user->id,
+                'amount' => $amount,
+                'payment_status' => 'pending',
+                'order_id' => $orderId,
+                'gateway' => 'razorpay'
+            ]);
+
         } catch (Exception $e) {
             Log::error('Razorpay order creation failed (Recharge): ' . $e->getMessage());
             return redirect()->back()->with("error", "Payment gateway error. Please try again.");
@@ -81,18 +91,27 @@ class PartnerRechargeController extends Controller
             $payment = $this->razorpayApi->payment->fetch($input['razorpay_payment_id']);
             $amount = $payment->amount / 100;
 
+            $recharge = Recharge::where('order_id', $payment->order_id)->first();
+
             if ($payment->status === 'captured') {
-                // ✅ Credit wallet
-                $wallet->credit($amount, 'Wallet recharge via Razorpay (#' . $payment->id . ')');
+                // ✅ Credit wallet and mark recharge success
+                $wallet->balance += $amount;
+                $wallet->save();
+
+                $recharge?->update([
+                    'payment_status' => 'success',
+                    'transaction_id' => $payment->id,
+                    'meta' => $payment->toArray(),
+                ]);
 
                 return redirect()->route('recharge.status', $user->id)
                     ->with('success', 'Wallet recharged successfully!');
             } else {
-                // Record failed transaction
-                $wallet->transactions()->create([
-                    'type' => 'credit',
-                    'amount' => $amount,
-                    'description' => 'Recharge failed (' . $payment->status . ')',
+                // ❌ Failed transaction
+                $recharge?->update([
+                    'payment_status' => 'failed',
+                    'transaction_id' => $payment->id,
+                    'meta' => $payment->toArray(),
                 ]);
 
                 return redirect()->route('recharge.status', $user->id)
@@ -112,11 +131,9 @@ class PartnerRechargeController extends Controller
     {
         $user = User::findOrFail($userId);
         $wallet = Wallet::firstOrCreate(['user_id' => $userId]);
-        $lastTxn = $wallet->transactions()->latest()->first();
-        $status = $lastTxn && $lastTxn->type === 'credit' ? 'success' : 'failed';
+        $lastRecharge = Recharge::where('user_id', $userId)->latest()->first();
+        $status = $lastRecharge?->payment_status ?? 'failed';
 
-        // dd($lastTxn);
-
-        return view('razorpay.recharge-status', compact('user', 'wallet', 'lastTxn', 'status'));
+        return view('razorpay.recharge-status', compact('user', 'wallet', 'lastRecharge', 'status'));
     }
 }

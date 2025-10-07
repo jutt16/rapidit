@@ -4,35 +4,11 @@
     <title>Recharge Wallet - {{ $user->name }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f9;
-            padding: 40px;
-            text-align: center;
-        }
-        .container {
-            max-width: 480px;
-            margin: auto;
-            background: #fff;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px #ddd;
-        }
-        button {
-            background: #0d6efd;
-            color: #fff;
-            padding: 12px 30px;
-            font-size: 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #084298;
-        }
-        h2 {
-            color: #333;
-        }
+        body { font-family: Arial, sans-serif; background: #f4f6f9; padding: 40px; text-align: center; }
+        .container { max-width: 480px; margin: auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 0 10px #ddd; }
+        button { background: #0d6efd; color: #fff; padding: 12px 30px; font-size: 16px; border: none; border-radius: 6px; cursor: pointer; }
+        button:hover { background: #084298; }
+        h2 { color: #333; }
     </style>
 </head>
 <body>
@@ -54,7 +30,6 @@
             "description": "Recharge Wallet for {{ $user->name }}",
             "order_id": "{{ $orderId }}",
             "handler": function (response) {
-                // After successful payment
                 var form = document.createElement('form');
                 form.method = 'POST';
                 form.action = "{{ route('recharge.callback', base64_encode($user->id)) }}";
@@ -62,7 +37,7 @@
                 var csrf = document.createElement('input');
                 csrf.type = 'hidden';
                 csrf.name = '_token';
-                csrf.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                csrf.value = document.querySelector('meta[name=\"csrf-token\"]').getAttribute('content');
                 form.appendChild(csrf);
 
                 for (const [key, value] of Object.entries(response)) {
@@ -76,9 +51,7 @@
                 document.body.appendChild(form);
                 form.submit();
             },
-            "theme": {
-                "color": "#0d6efd"
-            }
+            "theme": { "color": "#0d6efd" }
         };
 
         var rzp1 = new Razorpay(options);
