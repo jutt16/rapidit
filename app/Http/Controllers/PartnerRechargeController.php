@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Recharge;
+use App\Models\WalletTransaction;
 use Illuminate\Http\Request;
 use Razorpay\Api\Api;
 use Exception;
@@ -102,6 +103,14 @@ class PartnerRechargeController extends Controller
                     'payment_status' => 'success',
                     'transaction_id' => $payment->id,
                     'meta' => $payment->toArray(),
+                ]);
+
+                // ✅ Add Wallet Transaction record
+                WalletTransaction::create([
+                    'wallet_id'   => $wallet->id,
+                    'type'        => 'credit',
+                    'amount'      => $amount,
+                    'description' => 'Wallet recharge via Razorpay (#' . $payment->id . ')',
                 ]);
 
                 return redirect()->route('recharge.status', $user->id)
