@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BankingDetailController;
 use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\BookingPaymentController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\UserAddressController;
 use App\Http\Controllers\Api\UserProfileController;
 use App\Http\Controllers\Api\WalletController;
+use App\Http\Controllers\Api\WithdrawalController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -79,7 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings/{id}/mark-arrival', [BookingRequestController::class, 'markArrival']);
 
     // Booking Requests
-    Route::get('/booking-requests', [BookingRequestController::class, 'index']);
+    Route::get('/booking-request27|Jl3mO490SfDU6TsQ8QYpfUI3FRAZqCVexlaOksGef0b6816as', [BookingRequestController::class, 'index']);
     Route::post('/booking-requests/{id}/accept', [BookingRequestController::class, 'accept']);
     Route::post('/booking-requests/{id}/reject', [BookingRequestController::class, 'reject']);
 
@@ -116,6 +118,20 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Static pages
     Route::get('/static/{slug}', [StaticPageController::class, 'show']);
+
+    // banking details
+    Route::get('banking-details', [BankingDetailController::class,'index']);
+    Route::post('banking-details', [BankingDetailController::class,'store']);
+    Route::get('banking-details/{id}', [BankingDetailController::class,'show']);
+    Route::put('banking-details/{id}', [BankingDetailController::class,'update']);
+    Route::delete('banking-details/{id}', [BankingDetailController::class,'destroy']);
+    Route::post('banking-details/{id}/set-default', [BankingDetailController::class,'setDefault']);
+
+    // withdrawals
+    Route::get('withdrawals', [WithdrawalController::class,'index']);
+    Route::post('withdrawals', [WithdrawalController::class,'store']);
+    Route::get('withdrawals/{id}', [WithdrawalController::class,'show']);
+    Route::post('withdrawals/{id}/cancel', [WithdrawalController::class,'cancel']);
 });
 
 // Public endpoints (Razorpay will call / redirect)

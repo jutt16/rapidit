@@ -38,8 +38,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::resource('notifications', NotificationController::class);
 
-        Route::resource('bookings', BookingController::class);    
-        
+        Route::resource('bookings', BookingController::class);
+
         Route::post('notifications/{notification}/resend', [NotificationController::class, 'resend'])->name('notifications.resend');
 
         Route::resource('banners', BannerController::class);
@@ -75,6 +75,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('settings/provider-radius', [SettingsController::class, 'edit'])->name('settings.radius.edit');
         Route::put('settings/provider-radius', [SettingsController::class, 'update'])->name('settings.radius.update');
 
+        // list + show (GET)
+        Route::get('withdrawals', [WithdrawalAdminController::class, 'index'])->name('withdrawals.index');
+        Route::get('withdrawals/{id}', [WithdrawalAdminController::class, 'show'])->name('withdrawals.show');
+
+        // actions (POST)
+        Route::post('withdrawals/{id}/approve', [WithdrawalAdminController::class, 'approve'])->name('withdrawals.approve');
+        Route::post('withdrawals/{id}/reject', [WithdrawalAdminController::class, 'reject'])->name('withdrawals.reject');
+        Route::post('withdrawals/{id}/mark-paid', [WithdrawalAdminController::class, 'markPaid'])->name('withdrawals.markPaid');
+
         // logout route
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     });
@@ -100,4 +109,3 @@ Route::post('/partner/recharge/callback/{user}', [PartnerRechargeController::cla
 
 Route::get('/partner/recharge/status/{id}', [PartnerRechargeController::class, 'status'])
     ->name('recharge.status');
-

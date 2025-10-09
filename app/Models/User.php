@@ -86,4 +86,9 @@ class User extends Authenticatable
         }
         return $wallet->debit($amount, $description);
     }
+
+    public function bankingDetails()
+    {
+        return $this->hasMany(\App\Models\BankingDetail::class);
+    }
 }
