@@ -35,7 +35,7 @@ class BookingPaymentController extends Controller
     {
         $booking = Booking::findOrFail($bookingId);
 
-        if( $booking->payment_method != 'cod') {
+        if ($booking->payment_method != 'cod') {
             return response()->json([
                 'success' => false,
                 'message' => 'This endpoint is only for Cash on Delivery payments.',
@@ -47,7 +47,10 @@ class BookingPaymentController extends Controller
             ['payment_method' => $booking->payment_method, 'amount' => $booking->total_amount, 'status' => 'paid']
         );
 
-        $booking->update(['status' => 'paid']);
+        if (!$payment->wasRecentlyCreated) {
+            // record already existed — update the status to paid
+            $payment->update(['status' => 'paid']);
+        }
 
         // For COD, we just create a pending record. No external payment link.
         return response()->json([
@@ -67,7 +70,7 @@ class BookingPaymentController extends Controller
 
         $booking = Booking::findOrFail($bookingId);
 
-        if( $booking->payment_type != 'cod') {
+        if ($booking->payment_type != 'cod') {
             return response()->json([
                 'success' => false,
                 'message' => 'This endpoint is only for Cash on Delivery payments.',
