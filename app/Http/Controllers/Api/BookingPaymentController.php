@@ -47,6 +47,8 @@ class BookingPaymentController extends Controller
             ['payment_method' => $booking->payment_method, 'amount' => $booking->total_amount, 'status' => 'paid']
         );
 
+        $booking->update(['status' => 'paid']);
+
         // For COD, we just create a pending record. No external payment link.
         return response()->json([
             'success' => true,
