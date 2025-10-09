@@ -81,7 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings/{id}/mark-arrival', [BookingRequestController::class, 'markArrival']);
 
     // Booking Requests
-    Route::get('/booking-request27|Jl3mO490SfDU6TsQ8QYpfUI3FRAZqCVexlaOksGef0b6816as', [BookingRequestController::class, 'index']);
+    Route::get('/booking-requests', [BookingRequestController::class, 'index']);
     Route::post('/booking-requests/{id}/accept', [BookingRequestController::class, 'accept']);
     Route::post('/booking-requests/{id}/reject', [BookingRequestController::class, 'reject']);
 
