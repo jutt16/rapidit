@@ -55,46 +55,53 @@ class BookingRequestController extends Controller
      */
     public function accept(Request $request, $id)
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        $bookingRequest = BookingRequest::with('booking')
-            ->where('partner_id', $user->id)
-            ->findOrFail($id);
+            $bookingRequest = BookingRequest::with('booking')
+                ->where('partner_id', $user->id)
+                ->findOrFail($id);
 
-        if ($bookingRequest->status !== 'pending') {
+            if ($bookingRequest->status !== 'pending') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only pending requests can be accepted.',
+                ], 422);
+            }
+
+            // ✅ Check partner wallet balance before accepting
+            if ($user->wallet->balance < 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your wallet balance is negative. Please recharge before accepting new bookings.',
+                    'current_balance' => $user->wallet->balance,
+                ], 402); // 402 Payment Required
+            }
+
+            // ✅ Mark this one accepted
+            $bookingRequest->update(['status' => 'accepted']);
+
+            // ✅ Expire all other pending requests
+            BookingRequest::where('booking_id', $bookingRequest->booking_id)
+                ->where('id', '!=', $bookingRequest->id)
+                ->where('status', 'pending')
+                ->update(['status' => 'expired']);
+
+            // ✅ Update booking status
+            Booking::findOrFail($bookingRequest->booking_id)
+                ->update(['status' => 'accepted', 'partner_id' => $user->id]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Booking request accepted successfully.',
+                'data' => $bookingRequest->load('booking', 'partner'),
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Only pending requests can be accepted.',
-            ], 422);
+                'message' => 'Server error: ' . $e->getMessage(),
+            ], 500);
         }
-
-        // ✅ Check partner wallet balance before accepting
-        if ($user->wallet->balance < 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your wallet balance is negative. Please recharge before accepting new bookings.',
-                'current_balance' => $user->wallet->balance,
-            ], 402); // 402 Payment Required
-        }
-
-        // ✅ Mark this one accepted
-        $bookingRequest->update(['status' => 'accepted']);
-
-        // ✅ Expire all other pending requests
-        BookingRequest::where('booking_id', $bookingRequest->booking_id)
-            ->where('id', '!=', $bookingRequest->id)
-            ->where('status', 'pending')
-            ->update(['status' => 'expired']);
-
-        // ✅ Update booking status
-        Booking::findOrFail($bookingRequest->booking_id)
-            ->update(['status' => 'accepted', 'partner_id' => $user->id]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Booking request accepted successfully.',
-            'data' => $bookingRequest->load('booking', 'partner'),
-        ]);
     }
 
 
