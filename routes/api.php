@@ -104,7 +104,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // update (optional)
     Route::put('/bookings/{booking}/reviews/{id}', [ReviewController::class, 'update']);
 
-    Route::get('/bookings/{booking}/pay', [BookingPaymentController::class, 'pay']);
+    Route::post('/bookings/{booking}/pay', [BookingPaymentController::class, 'pay']);
+
+    // Route::post('/bookings/{booking}/mark-paid', [BookingPaymentController::class,'markPaid']);
     // Route::match(['get', 'post'], '/payments/callback', [BookingPaymentController::class, 'callback'])
     //     ->name('payments.callback');
 
