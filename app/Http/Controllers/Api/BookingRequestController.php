@@ -166,9 +166,9 @@ class BookingRequestController extends Controller
         }
 
         // Optional: restrict only the assigned partner to mark arrival
-        if (auth()->id() !== $bookingRequest->partner_id) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-        }
+        // if (auth()->id() !== $bookingRequest->partner_id) {
+        //     return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        // }
 
         // Update arrival time
         $bookingRequest->arrival_time = $request->input('arrival_time', Carbon::now());
