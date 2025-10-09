@@ -54,6 +54,13 @@
                 </li>
 
                 <li class="nav-item">
+                    <a href="{{ route('admin.withdrawals.index') }}" class="nav-link {{ request()->routeIs('admin.withdrawals.*') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-wallet"></i>
+                        <p>Withdrawals</p>
+                    </a>
+                </li>
+
+                <li class="nav-item">
                     <a href="{{ route('admin.banners.index') }}" class="nav-link {{ request()->routeIs('admin.banners.*') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-image"></i>
                         <p>Banners</p>

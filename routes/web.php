@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StaticPageController;
 use App\Http\Controllers\Admin\SupportController;
+use App\Http\Controllers\Admin\WithdrawalAdminController;
 use App\Http\Controllers\PartnerRechargeController;
 use App\Http\Controllers\RazorpayPaymentController;
 
