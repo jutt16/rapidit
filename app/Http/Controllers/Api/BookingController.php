@@ -92,6 +92,28 @@ class BookingController extends Controller
         }
     }
 
+    public function cancellations(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'user') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only users can view their cancellation charges.',
+            ], 403);
+        }
+
+        $charges = BookingCancellationCharge::with('booking')
+            ->where('user_id', $user->id)
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $charges,
+        ]);
+    }
+
     public function store(Request $request)
     {
         try {
