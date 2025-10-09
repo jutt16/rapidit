@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\BookingRequest;
+use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -69,12 +70,15 @@ class BookingRequestController extends Controller
                 ], 422);
             }
 
+            // Ensure wallet exists
+            $wallet = Wallet::firstOrCreate(['user_id' => $user->id], ['balance' => 0]);
+
             // ✅ Check partner wallet balance before accepting
-            if ($user->wallet->balance < 0) {
+            if ($wallet->balance < 0) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Your wallet balance is negative. Please recharge before accepting new bookings.',
-                    'current_balance' => $user->wallet->balance,
+                    'current_balance' => $wallet->balance,
                 ], 402); // 402 Payment Required
             }
 
