@@ -325,7 +325,11 @@ class BookingController extends Controller
         }
 
         // ✅ Mark booking as completed
-        $booking->update(['status' => 'completed']);
+        // $booking->update(['status' => 'completed']);
+        $booking->status = 'completed';
+        $booking->save();
+        $booking->refresh();
+
 
         $partner = $acceptedRequest->partner;
         $wallet = \App\Models\Wallet::firstOrCreate(['user_id' => $partner->id], ['balance' => 0]);
