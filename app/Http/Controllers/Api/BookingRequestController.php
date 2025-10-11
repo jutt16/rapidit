@@ -156,7 +156,9 @@ class BookingRequestController extends Controller
     public function markArrival(Request $request, $booking_id)
     {
         // Retrieve booking request by booking_id
-        $bookingRequest = BookingRequest::where('booking_id', $booking_id)->first();
+        $bookingRequest = BookingRequest::where('booking_id', $booking_id)
+        ->where('status', 'accepted')
+        ->first();
 
         if (!$bookingRequest) {
             return response()->json([
