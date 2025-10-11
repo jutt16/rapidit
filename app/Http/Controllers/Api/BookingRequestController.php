@@ -181,6 +181,7 @@ class BookingRequestController extends Controller
                 'booking_id' => $bookingRequest->booking_id,
                 'arrival_time' => $bookingRequest->arrival_time->format('Y-m-d H:i:s'),
             ],
+            'extra' => $bookingRequest
         ]);
     }
 }
