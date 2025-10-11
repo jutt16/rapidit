@@ -19,73 +19,77 @@ class ReviewController extends Controller
      */
     public function store(Request $request, Booking $booking)
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        $data = $request->validate([
-            'rating' => 'required|integer|min:1|max:5',
-            'comment' => 'nullable|string|max:1000',
-            'reviewer_type' => 'required|in:user,partner'
-        ]);
-
-        // Ensure booking is completed
-        if (!in_array($booking->status, ['completed', 'completed_by_partner'])) {
-            return response()->json(['success' => false, 'message' => 'You can leave a review only after booking is completed'], 422);
-        }
-
-        // If reviewer is user → review partner
-        if ($data['reviewer_type'] === 'user') {
-            if ($booking->user_id !== $user->id) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-            }
-
-            // prevent duplicate
-            if (Review::where('booking_id', $booking->id)->where('reviewer_type', 'user')->exists()) {
-                return response()->json(['success' => false, 'message' => 'User review already submitted for this booking'], 409);
-            }
-
-            $acceptedRequest = $booking->requests()->where('status', 'accepted')->first();
-            $partnerId = $acceptedRequest->partner_id ?? null;
-
-            $review = Review::create([
-                'booking_id' => $booking->id,
-                'user_id' => $user->id,
-                'partner_id' => $partnerId,
-                'reviewer_type' => 'user',
-                'rating' => $data['rating'],
-                'comment' => $data['comment'],
-                'status' => 'approved',
+            $data = $request->validate([
+                'rating' => 'required|integer|min:1|max:5',
+                'comment' => 'nullable|string|max:1000',
+                'reviewer_type' => 'required|in:user,partner'
             ]);
 
-            if ($partnerId) {
-                $this->recalculatePartnerRating($partnerId);
+            // Ensure booking is completed
+            if (!in_array($booking->status, ['completed', 'completed_by_partner'])) {
+                return response()->json(['success' => false, 'message' => 'You can leave a review only after booking is completed'], 422);
             }
+
+            // If reviewer is user → review partner
+            if ($data['reviewer_type'] === 'user') {
+                if ($booking->user_id !== $user->id) {
+                    return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+                }
+
+                // prevent duplicate
+                if (Review::where('booking_id', $booking->id)->where('reviewer_type', 'user')->exists()) {
+                    return response()->json(['success' => false, 'message' => 'User review already submitted for this booking'], 409);
+                }
+
+                $acceptedRequest = $booking->requests()->where('status', 'accepted')->first();
+                $partnerId = $acceptedRequest->partner_id ?? null;
+
+                $review = Review::create([
+                    'booking_id' => $booking->id,
+                    'user_id' => $user->id,
+                    'partner_id' => $partnerId,
+                    'reviewer_type' => 'user',
+                    'rating' => $data['rating'],
+                    'comment' => $data['comment'],
+                    'status' => 'approved',
+                ]);
+
+                if ($partnerId) {
+                    $this->recalculatePartnerRating($partnerId);
+                }
+            }
+
+            // If reviewer is partner → review user
+            else {
+                $acceptedRequest = $booking->requests()->where('status', 'accepted')->first();
+                if (!$acceptedRequest || $acceptedRequest->partner_id !== $user->id) {
+                    return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+                }
+
+                if (Review::where('booking_id', $booking->id)->where('reviewer_type', 'partner')->exists()) {
+                    return response()->json(['success' => false, 'message' => 'Partner review already submitted for this booking'], 409);
+                }
+
+                $review = Review::create([
+                    'booking_id' => $booking->id,
+                    'user_id' => $booking->user_id,
+                    'partner_id' => $user->id,
+                    'reviewer_type' => 'partner',
+                    'rating' => $data['rating'],
+                    'comment' => $data['comment'],
+                    'status' => 'approved',
+                ]);
+
+                $this->recalculateUserRating($booking->user_id);
+            }
+
+            return response()->json(['success' => true, 'message' => 'Review submitted', 'data' => $review], 201);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
-
-        // If reviewer is partner → review user
-        else {
-            $acceptedRequest = $booking->requests()->where('status', 'accepted')->first();
-            if (!$acceptedRequest || $acceptedRequest->partner_id !== $user->id) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-            }
-
-            if (Review::where('booking_id', $booking->id)->where('reviewer_type', 'partner')->exists()) {
-                return response()->json(['success' => false, 'message' => 'Partner review already submitted for this booking'], 409);
-            }
-
-            $review = Review::create([
-                'booking_id' => $booking->id,
-                'user_id' => $booking->user_id,
-                'partner_id' => $user->id,
-                'reviewer_type' => 'partner',
-                'rating' => $data['rating'],
-                'comment' => $data['comment'],
-                'status' => 'approved',
-            ]);
-
-            $this->recalculateUserRating($booking->user_id);
-        }
-
-        return response()->json(['success' => true, 'message' => 'Review submitted', 'data' => $review], 201);
     }
 
     public function recalculateUserRating($userId)
