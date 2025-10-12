@@ -14,26 +14,31 @@ class WithdrawalController extends Controller
     // list user's withdrawals
     public function index(Request $req)
     {
-        $user = $req->user();
-        $list = $user->withdrawals()->with('bankingDetail')->latest()->paginate(20);
-        // transform to hide sensitive info
-        $list->getCollection()->transform(function ($w) {
-            return [
-                'id' => $w->id,
-                'amount' => $w->amount,
-                'fee' => $w->fee,
-                'currency' => $w->currency,
-                'status' => $w->status,
-                'reference' => $w->reference,
-                'banking_detail' => [
-                    'id' => $w->bankingDetail->id,
-                    'bank_name' => $w->bankingDetail->bank_name,
-                    'account_number_masked' => $w->bankingDetail->masked_account()
-                ],
-                'created_at' => $w->created_at
-            ];
-        });
-        return response()->json($list);
+        try {
+            $user = $req->user();
+            $list = $user->withdrawals()->with('bankingDetail')->latest()->paginate(20);
+            // transform to hide sensitive info
+            $list->getCollection()->transform(function ($w) {
+                return [
+                    'id' => $w->id,
+                    'amount' => $w->amount,
+                    'fee' => $w->fee,
+                    'currency' => $w->currency,
+                    'status' => $w->status,
+                    'reference' => $w->reference,
+                    'banking_detail' => [
+                        'id' => $w->bankingDetail->id,
+                        'bank_name' => $w->bankingDetail->bank_name,
+                        'account_number_masked' => $w->bankingDetail->masked_account()
+                    ],
+                    'created_at' => $w->created_at
+                ];
+            });
+            return response()->json('success', true, ['data' => $list]);
+        } catch (\Throwable $ex) {
+            \Log::error('withdrawal.index ' . $ex->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error'], 500);
+        }
     }
 
     // create withdrawal
