@@ -35,9 +35,9 @@ class WithdrawalController extends Controller
                 ];
             });
             return response()->json('success', true, ['data' => $list]);
-        } catch (\Throwable $ex) {
-            \Log::error('withdrawal.index ' . $ex->getMessage());
-            return response()->json(['success' => false, 'message' => 'Server error'], 500);
+        } catch (\Exception $e) {
+            \Log::error('withdrawal.index ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
