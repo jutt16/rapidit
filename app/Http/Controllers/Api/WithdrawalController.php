@@ -17,7 +17,8 @@ class WithdrawalController extends Controller
         try {
             $user = $req->user();
             $list = $user->withdrawals()->with('bankingDetail')->latest()->paginate(20);
-            // transform to hide sensitive info
+
+            // Transform to hide sensitive info
             $list->getCollection()->transform(function ($w) {
                 return [
                     'id' => $w->id,
@@ -29,15 +30,22 @@ class WithdrawalController extends Controller
                     'banking_detail' => [
                         'id' => $w->bankingDetail->id,
                         'bank_name' => $w->bankingDetail->bank_name,
-                        'account_number_masked' => $w->bankingDetail->masked_account()
+                        'account_number_masked' => $w->bankingDetail->masked_account(),
                     ],
-                    'created_at' => $w->created_at
+                    'created_at' => $w->created_at,
                 ];
             });
-            return response()->json('success', true, ['data' => $list]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $list,
+            ], 200);
         } catch (\Exception $e) {
             \Log::error('withdrawal.index ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 
