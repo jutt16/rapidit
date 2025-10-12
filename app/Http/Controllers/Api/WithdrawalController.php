@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Models\Withdrawal;
 use App\Models\WalletTransaction;
+use Illuminate\Support\Facades\Validator;
 
 class WithdrawalController extends Controller
 {
@@ -53,15 +54,26 @@ class WithdrawalController extends Controller
     public function store(Request $req)
     {
         $user = $req->user();
-        $payload = $req->validate([
+
+        // ✅ Use Validator facade
+        $validator = Validator::make($req->all(), [
             'banking_detail_id' => 'required|integer|exists:banking_details,id',
             'amount' => 'required|numeric|min:1',
         ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $payload = $validator->validated();
+
         // ensure banking detail belongs to user
         $banking = $user->bankingDetails()->where('id', $payload['banking_detail_id'])->firstOrFail();
 
-        $amount = (float)$payload['amount'];
+        $amount = (float) $payload['amount'];
         $fee = $this->calculateFee($amount); // implement your fee logic
         $total = round($amount + $fee, 2);
 
@@ -69,20 +81,27 @@ class WithdrawalController extends Controller
         try {
             // lock wallet row to avoid race conditions
             $wallet = $user->wallet()->lockForUpdate()->first();
+
             if (!$wallet) {
                 DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'Wallet not found'], 422);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Wallet not found',
+                ], 422);
             }
 
-            // use wallet->debit (your model throws exception on insufficient funds)
+            // debit funds safely
             try {
                 $wallet->debit($total, 'Withdrawal request (pending)');
             } catch (\Exception $e) {
                 DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'Insufficient funds'], 422);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insufficient funds',
+                ], 422);
             }
 
-            // create withdrawal row
+            // create withdrawal record
             $withdrawal = Withdrawal::create([
                 'user_id' => $user->id,
                 'banking_detail_id' => $banking->id,
@@ -90,17 +109,24 @@ class WithdrawalController extends Controller
                 'fee' => $fee,
                 'currency' => $banking->currency ?? 'PKR',
                 'status' => 'pending',
-                'reference' => Str::uuid()
+                'reference' => Str::uuid(),
             ]);
 
             DB::commit();
 
-            // TODO: notify admin / create event (WithdrawalRequested)
-            return response()->json(['success' => true, 'data' => $withdrawal], 201);
+            // (Optional) notify admin / fire event
+            return response()->json([
+                'success' => true,
+                'data' => $withdrawal,
+            ], 201);
         } catch (\Throwable $ex) {
             DB::rollBack();
             \Log::error('withdrawal.create ' . $ex->getMessage());
-            return response()->json(['success' => false, 'message' => 'Server error'], 500);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Server error',
+            ], 500);
         }
     }
 
