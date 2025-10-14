@@ -58,7 +58,7 @@ class PartnerProfileController extends Controller
                 'police_verification' => 'nullable|file|mimes:jpg,jpeg,png,pdf',
                 'covid_vaccination_certificate' => 'nullable|file|mimes:jpg,jpeg,png,pdf',
                 'selfie_with_costume' => 'nullable|file|mimes:jpg,jpeg,png',
-                'intro_video' => 'nullable|file|mimetypes:video/*',
+                'intro_video' => 'nullable|file|mimetypes:video/mp4,video/mov,video/avi,video/mpeg|max:51200', // 50MB limit
                 'service_ids' => 'nullable|array', // services partner offers
                 'service_ids.*' => 'integer|exists:services,id',
             ]);
