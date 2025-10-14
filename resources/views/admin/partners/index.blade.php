@@ -64,7 +64,7 @@
             </table>
 
             <div class="mt-2 px-3">
-                {{ $partners->withQueryString()->links() }}
+                {{ $partners->withQueryString()->links('pagination::bootstrap-5') }}
             </div>
         </div>
     </div>
