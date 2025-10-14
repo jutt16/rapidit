@@ -39,9 +39,18 @@ class PartnerController extends Controller
     {
         $request->validate([
             'partner_status' => 'required|in:pending,approved,rejected',
+            'rejection_notes' => 'nullable|string|max:2000',
         ]);
 
-        $user->update(['partner_status' => $request->partner_status]);
+        // If rejected, make sure note is provided
+        if ($request->partner_status === 'rejected' && empty($request->rejection_notes)) {
+            return back()->withErrors(['rejection_notes' => 'Please provide a reason for rejection.'])->withInput();
+        }
+
+        $user->update([
+            'partner_status' => $request->partner_status,
+            'rejection_notes' => $request->partner_status === 'rejected' ? $request->rejection_notes : null,
+        ]);
 
         return redirect()->back()->with('success', 'Partner status updated successfully.');
     }

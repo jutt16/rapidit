@@ -26,6 +26,7 @@ class User extends Authenticatable
         'role', // 'admin', 'partner', 'user'
         'status',
         'partner_status', // only used if role = partner
+        'rejection_notes', // notes for rejecting partner application
         'fcm_token',
     ];
 
