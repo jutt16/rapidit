@@ -68,7 +68,7 @@
                             <td>{{ $index + 1 }}</td>
                             <td>
                                 @if($user->role == 'partner')
-                                {{ $user->partnerProfile->full_name }}
+                                    {{ $user->partnerProfile->full_name ?? $user->name }}
                                 @else
                                 {{ $user->name }}
                                 @endif
