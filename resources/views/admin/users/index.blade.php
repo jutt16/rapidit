@@ -66,7 +66,13 @@
                         @forelse($users as $index => $user)
                         <tr>
                             <td>{{ $index + 1 }}</td>
-                            <td>{{ $user->name }}</td>
+                            <td>
+                                @if($user->role == 'partner')
+                                {{ $user->partnerProfile->full_name }}
+                                @else
+                                {{ $user->name }}
+                                @endif
+                            </td>
                             <td>{{ $user->phone }}</td>
                             <td>
                                 <span class="badge 
