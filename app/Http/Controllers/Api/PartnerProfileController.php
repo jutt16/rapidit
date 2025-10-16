@@ -220,6 +220,11 @@ class PartnerProfileController extends Controller
 
             $profile->update($data);
 
+            if($user->partner_status !== 'approved') {
+                $user->partner_status = 'pending';
+                $user->save();
+            }
+
             // Sync services
             if ($request->has('service_ids')) {
                 $profile->services()->sync($request->service_ids);
