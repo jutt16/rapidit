@@ -34,7 +34,7 @@
                     @forelse($partners as $index => $partner)
                     <tr>
                         <td>{{ $partners->firstItem() + $index }}</td>
-                        <td>{{ $partner->partnerProfile?->full_name ?? $partner->name }}</td>
+                        <td>{{ $partner->partnerProfile?->full_name ?? $partner->name ?? 'N/A' }}</td>
                         <td>{{ $partner->phone ?? 'N/A' }}</td>
                         <td>
                             <span class="badge 
