@@ -135,6 +135,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('withdrawals', [WithdrawalController::class,'store']);
     Route::get('withdrawals/{id}', [WithdrawalController::class,'show']);
     Route::post('withdrawals/{id}/cancel', [WithdrawalController::class,'cancel']);
+
+    Route::post('/delete-profile', [UserProfileController::class, 'deleteProfile']);
 });
 
 // Public endpoints (Razorpay will call / redirect)

@@ -90,4 +90,14 @@ class UserProfileController extends Controller
             ]);
         }
     }
+
+    public function deleteProfile(Request $request)
+    {
+        $user = $request->user();
+        $user->delete();
+        return response()->json([
+            'status' => true,
+            'message' => 'User deleted successfully.'
+        ]);
+    }
 }
