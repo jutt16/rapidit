@@ -53,7 +53,7 @@
                                 </td>
                             </tr>
                             <tr><th>Gender:</th><td>{{ $user->partnerProfile->gender ?? 'N/A' }}</td></tr>
-                            <tr><th>Date of Birth:</th><td>{{ $user->partnerProfile->date_of_birth?->format('d-m-Y') ?? 'N/A' }}</td></tr>
+                            <tr><th>Date of Birth:</th><td>{{ optional($user->partnerProfile?->date_of_birth)->format('d-m-Y') ?? 'N/A' }}</td></tr>
                             <tr><th>Experience:</th><td>{{ $user->partnerProfile->years_of_experience ?? 'N/A' }} years</td></tr>
                             <tr><th>Languages:</th><td>{{ $user->partnerProfile->languages ? implode(', ', $user->partnerProfile->languages) : 'N/A' }}</td></tr>
                         </tbody>
