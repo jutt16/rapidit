@@ -210,8 +210,20 @@ class BookingController extends Controller
                 // 6. Filter available partners (using model method)
                 $availablePartners = $partners->filter(function ($partner) use ($request) {
                     $availability = PartnerAvailability::where('partner_id', $partner->user_id)->first();
-                    return $availability && $availability->isAvailableFor($request->schedule_date, $request->schedule_time);
+
+                    if (!$availability) {
+                        return false;
+                    }
+
+                    // If schedule_time exists → use both date and time
+                    if (!empty($request->schedule_time)) {
+                        return $availability->isAvailableFor($request->schedule_date, $request->schedule_time);
+                    }
+
+                    // Otherwise → check by date only
+                    return $availability->isAvailableForDateOnly($request->schedule_date);
                 });
+
 
                 // 7. Attach booking requests
                 foreach ($availablePartners as $partner) {
