@@ -35,7 +35,7 @@
                     <tr>
                         <td>{{ $partners->firstItem() + $index }}</td>
                         <td>{{ $partner->partnerProfile?->full_name ?? $partner->name }}</td>
-                        <td>{{ $partner->phone }}</td>
+                        <td>{{ $partner->phone ?? 'N/A' }}</td>
                         <td>
                             <span class="badge 
                                 @if($partner->partner_status == 'pending') bg-warning

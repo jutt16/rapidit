@@ -68,12 +68,12 @@
                             <td>{{ $index + 1 }}</td>
                             <td>
                                 @if($user->role == 'partner')
-                                    {{ $user->partnerProfile->full_name ?? $user->name }}
+                                    {{ $user->partnerProfile?->full_name ?? $user->name ?? 'N/A' }}
                                 @else
-                                {{ $user->name }}
+                                {{ $user->name ?? 'N/A' }}
                                 @endif
                             </td>
-                            <td>{{ $user->phone }}</td>
+                            <td>{{ $user->phone ?? 'N/A' }}</td>
                             <td>
                                 <span class="badge 
                                     @if($user->role === 'admin') bg-danger
