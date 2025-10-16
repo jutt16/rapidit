@@ -12,7 +12,7 @@ class UserController extends Controller
     // Display list of users
     public function index(Request $request)
     {
-        $query = User::query();
+        $query = User::with('partnerProfile'); // eager load partner profile
 
         if ($request->filled('role')) {
             $query->where('role', $request->role);
