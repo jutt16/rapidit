@@ -25,40 +25,41 @@ class RazorpayPaymentController extends Controller
      */
     public function index($bookingId): View|RedirectResponse
     {
-        // dd('Entered RazorpayPaymentController', $bookingId);
-        $booking = Booking::with('user')->findOrFail($bookingId);
-
-        // if ($booking->payment_method !== "razorpay") {
-        //     return redirect()->back()->with("error", "Invalid payment method");
-        // }
-
-        // Check if payment already exists and is successful
-        $existingPayment = BookingPayment::where('booking_id', $bookingId)
-            ->where('status', 'paid')
-            ->first();
-
-        if ($existingPayment) {
-            // ✅ if already paid, go directly to status page
-            return redirect()->route('razorpay.status', $bookingId);
-        }
-
-        // Create Razorpay Order
         try {
+            Log::info('Entered RazorpayPaymentController', ['bookingId' => $bookingId]);
+
+            $booking = Booking::with('user')->findOrFail($bookingId);
+
+            if ($booking->payment_method !== "razorpay") {
+                return redirect()->back()->with("error", "Invalid payment method");
+            }
+
+            $existingPayment = BookingPayment::where('booking_id', $bookingId)
+                ->where('status', 'paid')
+                ->first();
+
+            if ($existingPayment) {
+                return redirect()->route('razorpay.status', $bookingId);
+            }
+
             $orderData = [
                 'receipt' => 'booking_' . $booking->id,
-                'amount' => $booking->total_amount * 100, // amount in paise
+                'amount' => $booking->total_amount * 100,
                 'currency' => 'INR',
-                'payment_capture' => 1 // auto capture
+                'payment_capture' => 1
             ];
 
             $razorpayOrder = $this->razorpayApi->order->create($orderData);
             $orderId = $razorpayOrder['id'];
-        } catch (Exception $e) {
-            Log::error('Razorpay order creation failed: ' . $e->getMessage());
-            return redirect()->back()->with("error", "Payment gateway error. Please try again.");
-        }
 
-        return view('razorpay.pay', compact('booking', 'orderId'));
+            return view('razorpay.pay', compact('booking', 'orderId'));
+        } catch (\Throwable $e) {
+            Log::error('RazorpayPaymentController@index failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            dd('Error occurred', $e->getMessage());
+        }
     }
 
     /**
