@@ -23,7 +23,7 @@ use App\Http\Controllers\RazorpayPaymentController;
 Route::get('/', function () {
     // return redirect()->route('admin.login');
     return view('home.index');
-});
+})->name('home');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -91,6 +91,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 });
 
 Route::get('razorpay-payment/{id}', [RazorpayPaymentController::class, 'index'])
+    ->withoutMiddleware(['auth'])
     ->name('razorpay.pay');
 
 Route::post('razorpay-verify', [RazorpayPaymentController::class, 'verifyPayment'])
