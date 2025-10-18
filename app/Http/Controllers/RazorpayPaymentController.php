@@ -25,12 +25,12 @@ class RazorpayPaymentController extends Controller
      */
     public function index($bookingId): View|RedirectResponse
     {
-        dd('Entered RazorpayPaymentController', $bookingId);
+        // dd('Entered RazorpayPaymentController', $bookingId);
         $booking = Booking::with('user')->findOrFail($bookingId);
 
-        if ($booking->payment_method !== "razorpay") {
-            return redirect()->back()->with("error", "Invalid payment method");
-        }
+        // if ($booking->payment_method !== "razorpay") {
+        //     return redirect()->back()->with("error", "Invalid payment method");
+        // }
 
         // Check if payment already exists and is successful
         $existingPayment = BookingPayment::where('booking_id', $bookingId)
