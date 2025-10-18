@@ -25,84 +25,43 @@ class RazorpayPaymentController extends Controller
      */
     public function index($bookingId): View|RedirectResponse
     {
-        $booking = Booking::with('user')->findOrFail($bookingId);
-
-        // Validate minimum amount
-        $amountInPaise = intval($booking->total_amount * 100);
-
-        if ($amountInPaise < 100) {
-            return redirect()->back()->with("error", "Minimum payment amount must be ₹1.00 or higher.");
-        }
-
-        // Check if payment already exists and is successful
-        $existingPayment = BookingPayment::where('booking_id', $bookingId)
-            ->where('status', 'paid')
-            ->first();
-
-        if ($existingPayment) {
-            return redirect()->route('razorpay.status', $bookingId);
-        }
-
         try {
+            Log::info('Entered RazorpayPaymentController', ['bookingId' => $bookingId]);
+
+            $booking = Booking::with('user')->findOrFail($bookingId);
+
+            if ($booking->payment_method !== "razorpay") {
+                return redirect()->back()->with("error", "Invalid payment method");
+            }
+
+            $existingPayment = BookingPayment::where('booking_id', $bookingId)
+                ->where('status', 'paid')
+                ->first();
+
+            if ($existingPayment) {
+                return redirect()->route('razorpay.status', $bookingId);
+            }
+
             $orderData = [
                 'receipt' => 'booking_' . $booking->id,
-                'amount' => $amountInPaise, // in paise
+                'amount' => $booking->total_amount * 100,
                 'currency' => 'INR',
                 'payment_capture' => 1
             ];
 
             $razorpayOrder = $this->razorpayApi->order->create($orderData);
             $orderId = $razorpayOrder['id'];
-        } catch (Exception $e) {
-            Log::error('Razorpay order creation failed', [
-                'booking_id' => $bookingId,
-                'amount' => $booking->total_amount,
-                'error' => $e->getMessage(),
+
+            return view('razorpay.pay', compact('booking', 'orderId'));
+        } catch (\Throwable $e) {
+            Log::error('RazorpayPaymentController@index failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
-            return redirect()->back()->with("error", "Payment gateway error: " . $e->getMessage());
+            echo 'Error occurred: ' . $e->getMessage();
+            // dd('Error occurred', $e->getMessage());
         }
-
-        return view('razorpay.pay', compact('booking', 'orderId'));
     }
-
-    // public function index($bookingId): View|RedirectResponse
-    // {
-    //     try {
-    //         Log::info('Entered RazorpayPaymentController', ['bookingId' => $bookingId]);
-
-    //         $booking = Booking::with('user')->findOrFail($bookingId);
-
-    //         if ($booking->payment_method !== "razorpay") {
-    //             return redirect()->back()->with("error", "Invalid payment method");
-    //         }
-
-    //         $existingPayment = BookingPayment::where('booking_id', $bookingId)
-    //             ->where('status', 'paid')
-    //             ->first();
-
-    //         if ($existingPayment) {
-    //             return redirect()->route('razorpay.status', $bookingId);
-    //         }
-
-    //         $orderData = [
-    //             'receipt' => 'booking_' . $booking->id,
-    //             'amount' => $booking->total_amount * 100,
-    //             'currency' => 'INR',
-    //             'payment_capture' => 1
-    //         ];
-
-    //         $razorpayOrder = $this->razorpayApi->order->create($orderData);
-    //         $orderId = $razorpayOrder['id'];
-
-    //         return view('razorpay.pay', compact('booking', 'orderId'));
-    //     } catch (\Throwable $e) {
-    //         Log::error('RazorpayPaymentController@index failed', [
-    //             'message' => $e->getMessage(),
-    //             'trace' => $e->getTraceAsString()
-    //         ]);
-    //         dd('Error occurred', $e->getMessage());
-    //     }
-    // }
 
     /**
      * Handle Razorpay payment callback
