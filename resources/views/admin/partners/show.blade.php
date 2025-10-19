@@ -152,33 +152,62 @@
             @endphp
 
             @foreach($docs as $label => $file)
-            <div class="col-md-4 mb-4 text-center">
-                <p class="fw-bold mb-1">{{ $label }}</p>
-                @if($file)
-                    @php $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION)); @endphp
-                    @if(in_array($ext, ['jpg','jpeg','png','gif']))
-                        <img src="{{ asset('storage/'.$file) }}" class="img-fluid rounded border shadow-sm" style="max-height:180px;">
-                    @elseif(in_array($ext, ['mp4','mov','avi']))
-                        <video controls class="rounded border shadow-sm" style="width:100%; max-height:180px;">
-                            <source src="{{ asset('storage/'.$file) }}" type="video/mp4">
-                        </video>
+                <div class="col-md-4 mb-4 text-center">
+                    <p class="fw-bold mb-1">{{ $label }}</p>
+                    @if($file)
+                        @php 
+                            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION)); 
+                            $fileUrl = asset('storage/'.$file);
+                        @endphp
+
+                        {{-- Image Preview --}}
+                        @if(in_array($ext, ['jpg','jpeg','png','gif','webp']))
+                            <a href="{{ $fileUrl }}" target="_blank">
+                                <img src="{{ $fileUrl }}" 
+                                     class="img-fluid rounded border shadow-sm preview-image" 
+                                     style="max-height: 180px; object-fit: cover; cursor: pointer;">
+                            </a>
+
+                        {{-- Video Preview --}}
+                        @elseif(in_array($ext, ['mp4','mov','avi','mkv','webm']))
+                            <a href="{{ $fileUrl }}" target="_blank">
+                                <video class="rounded border shadow-sm preview-video" 
+                                       style="width: 100%; max-height: 180px; cursor: pointer;" muted>
+                                    <source src="{{ $fileUrl }}" type="video/{{ $ext }}">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </a>
+
+                        {{-- PDF or Other Docs --}}
+                        @elseif(in_array($ext, ['pdf']))
+                            <a href="{{ $fileUrl }}" target="_blank" class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-file-pdf me-1"></i> View {{ $label }}
+                            </a>
+                        @else
+                            <a href="{{ $fileUrl }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-download me-1"></i> Open {{ $label }}
+                            </a>
+                        @endif
                     @else
-                        <a href="{{ asset('storage/'.$file) }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-download me-1"></i> Download {{ $label }}
-                        </a>
+                        <span class="text-muted">Not uploaded</span>
                     @endif
-                @else
-                    <span class="text-muted">Not uploaded</span>
-                @endif
-            </div>
+                </div>
             @endforeach
         </div>
     </div>
 </div>
-
 @endsection
 
 @section('customJS')
+<style>
+.preview-image, .preview-video {
+    transition: transform 0.2s ease-in-out;
+}
+.preview-image:hover, .preview-video:hover {
+    transform: scale(1.05);
+}
+</style>
+
 <script>
 $(document).ready(function () {
     // Works for normal select
