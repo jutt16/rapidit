@@ -32,6 +32,7 @@ class BookingController extends Controller
                     'cookBooking',
                     'maidPackage',
                     'review',
+                    'payments', // eager load payments for is_paid
                 ])
                     ->where('user_id', $user->id)
                     ->latest()
@@ -44,6 +45,10 @@ class BookingController extends Controller
                         } else {
                             unset($booking->requests);
                         }
+
+                        // Add is_paid flag
+                        $booking->is_paid = $booking->is_paid;
+
                         return $booking;
                     });
             } elseif ($user->role === 'partner') {
@@ -57,6 +62,7 @@ class BookingController extends Controller
                     'maidPackage',
                     'review',
                     'user.profile',
+                    'payments', // eager load payments for is_paid
                 ])
                     ->whereHas('requests', function ($q) use ($user) {
                         $q->where('partner_id', $user->id);
@@ -69,6 +75,9 @@ class BookingController extends Controller
                             ->where('partner_id', $user->id)
                             ->with('partner.partnerProfile')
                             ->get();
+
+                        // Add is_paid flag
+                        $booking->is_paid = $booking->is_paid;
 
                         return $booking;
                     });
