@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\BookingRequest;
 use App\Models\BookingCancellationCharge;
+use App\Models\BookingPayment;
 use App\Models\CookBooking;
 use App\Models\PartnerAvailability;
 use App\Models\PartnerProfile;
@@ -32,7 +33,6 @@ class BookingController extends Controller
                     'cookBooking',
                     'maidPackage',
                     'review',
-                    'payments', // eager load payments for is_paid
                 ])
                     ->where('user_id', $user->id)
                     ->latest()
@@ -46,9 +46,10 @@ class BookingController extends Controller
                             unset($booking->requests);
                         }
 
-                        // Add is_paid flag
-                        $booking->is_paid = $booking->is_paid;
-
+                        // ✅ add is_paid flag based on BookingPayment status
+                        $booking->is_paid = BookingPayment::where('booking_id', $booking->id)
+                            ->where('status', 'paid')
+                            ->exists();
                         return $booking;
                     });
             } elseif ($user->role === 'partner') {
@@ -62,7 +63,6 @@ class BookingController extends Controller
                     'maidPackage',
                     'review',
                     'user.profile',
-                    'payments', // eager load payments for is_paid
                 ])
                     ->whereHas('requests', function ($q) use ($user) {
                         $q->where('partner_id', $user->id);
@@ -76,8 +76,10 @@ class BookingController extends Controller
                             ->with('partner.partnerProfile')
                             ->get();
 
-                        // Add is_paid flag
-                        $booking->is_paid = $booking->is_paid;
+                        // ✅ add is_paid flag based on BookingPayment status
+                        $booking->is_paid = BookingPayment::where('booking_id', $booking->id)
+                            ->where('status', 'paid')
+                            ->exists();
 
                         return $booking;
                     });
