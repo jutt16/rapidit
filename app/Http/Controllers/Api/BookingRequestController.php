@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\BookingPayment;
 use App\Models\BookingRequest;
 use App\Models\Wallet;
 use Illuminate\Http\Request;
@@ -38,6 +39,18 @@ class BookingRequestController extends Controller
                 })
                 ->latest()
                 ->get();
+
+            // Add is_paid flag to each request's booking
+            $requests->transform(function ($req) {
+                if ($req->booking && $req->booking->id) {
+                    $req->booking->is_paid = BookingPayment::where('booking_id', $req->booking->id)
+                        ->where('status', 'paid')
+                        ->exists();
+                } else {
+                    $req->booking->is_paid = false;
+                }
+                return $req;
+            });
 
             return response()->json([
                 'success' => true,
@@ -157,8 +170,8 @@ class BookingRequestController extends Controller
     {
         // Retrieve booking request by booking_id
         $bookingRequest = BookingRequest::where('booking_id', $booking_id)
-        ->where('status', 'accepted')
-        ->first();
+            ->where('status', 'accepted')
+            ->first();
 
         if (!$bookingRequest) {
             return response()->json([
