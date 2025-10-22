@@ -36,10 +36,13 @@ class BookingPaymentController extends Controller
         $booking = Booking::findOrFail($bookingId);
 
         if ($booking->payment_method != 'cod') {
-            return response()->json([
-                'success' => false,
-                'message' => 'This endpoint is only for Cash on Delivery payments.',
-            ], 400);
+
+            $booking->payment_method == 'cod';
+            $booking->save();
+            // return response()->json([
+            //     'success' => false,
+            //     'message' => 'This endpoint is only for Cash on Delivery payments.',
+            // ], 400);
         }
 
         $payment = BookingPayment::firstOrCreate(
