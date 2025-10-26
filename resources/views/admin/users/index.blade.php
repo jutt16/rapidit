@@ -24,9 +24,11 @@
 <section class="content">
     <div class="container-fluid">
 
-        <!-- Filter Form -->
+        <!-- Filter + Search Form -->
         <div class="mb-3">
             <form action="{{ route('admin.users.index') }}" method="GET" class="form-inline">
+
+                {{-- Role Filter --}}
                 <div class="form-group mr-2">
                     <select name="role" class="form-control">
                         <option value="">-- All Roles --</option>
@@ -35,7 +37,23 @@
                         <option value="user" {{ request('role') == 'user' ? 'selected' : '' }}>User</option>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary">Filter</button>
+
+                {{-- Backend Search --}}
+                <div class="form-group mr-2">
+                    <input type="text" name="search" class="form-control"
+                           value="{{ request('search') }}"
+                           placeholder="Search by name or phone...">
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Search
+                </button>
+
+                @if(request('role') || request('search'))
+                <a href="{{ route('admin.users.index') }}" class="btn btn-secondary ml-2">
+                    <i class="fas fa-times"></i> Reset
+                </a>
+                @endif
             </form>
         </div>
 
@@ -50,7 +68,7 @@
             </div>
 
             <div class="card-body table-responsive p-0">
-                <table class="table table-hover text-nowrap">
+                <table id="usersTable" class="table table-hover text-nowrap">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -65,12 +83,12 @@
                     <tbody>
                         @forelse($users as $index => $user)
                         <tr>
-                            <td>{{ $index + 1 }}</td>
+                            <td>{{ $loop->iteration }}</td>
                             <td>
                                 @if($user->role == 'partner')
                                     {{ $user->partnerProfile?->full_name ?? $user->name ?? 'N/A' }}
                                 @else
-                                {{ $user->name ?? 'N/A' }}
+                                    {{ $user->name ?? 'N/A' }}
                                 @endif
                             </td>
                             <td>{{ $user->phone ?? 'N/A' }}</td>
@@ -84,16 +102,16 @@
                             </td>
                             <td>
                                 @if($user->status)
-                                <span class="badge bg-success">Active</span>
+                                    <span class="badge bg-success">Active</span>
                                 @else
-                                <span class="badge bg-danger">Inactive</span>
+                                    <span class="badge bg-danger">Inactive</span>
                                 @endif
                             </td>
                             <td>
                                 @if($user->phone_verified)
-                                <i class="fas fa-check text-success"></i>
+                                    <i class="fas fa-check text-success"></i>
                                 @else
-                                <i class="fas fa-times text-danger"></i>
+                                    <i class="fas fa-times text-danger"></i>
                                 @endif
                             </td>
                             <td>
@@ -120,7 +138,35 @@
                     </tbody>
                 </table>
             </div>
+
+            <div class="card-footer clearfix">
+                {{-- Pagination (Laravel) --}}
+                {{ $users->links() }}
+            </div>
         </div>
     </div>
 </section>
+@endsection
+
+@section('scripts')
+<!-- ✅ AdminLTE DataTables JS Integration -->
+<script>
+    $(function () {
+        // Initialize DataTables on your table
+        $('#usersTable').DataTable({
+            "paging": true,
+            "lengthChange": true,
+            "searching": true,    // Enable client-side search
+            "ordering": true,
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+            "language": {
+                "search": "Quick Filter:",
+                "lengthMenu": "Show _MENU_ entries per page",
+                "info": "Showing _START_ to _END_ of _TOTAL_ users"
+            }
+        });
+    });
+</script>
 @endsection

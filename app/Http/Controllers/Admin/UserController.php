@@ -12,13 +12,23 @@ class UserController extends Controller
     // Display list of users
     public function index(Request $request)
     {
-        $query = User::with('partnerProfile'); // eager load partner profile
+        $query = User::query();
 
+        // Role filter
         if ($request->filled('role')) {
             $query->where('role', $request->role);
         }
 
-        $users = $query->orderBy('id', 'desc')->get();
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->latest()->paginate(20);
 
         return view('admin.users.index', compact('users'));
     }

@@ -13,8 +13,21 @@ class PartnerController extends Controller
     {
         $query = User::where('role', 'partner');
 
+        // Filter by status
         if ($request->has('status') && in_array($request->status, ['pending', 'approved', 'rejected'])) {
             $query->where('partner_status', $request->status);
+        }
+
+        // 🔍 Search by name or phone
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhereHas('partnerProfile', function ($subQuery) use ($search) {
+                        $subQuery->where('full_name', 'like', "%{$search}%");
+                    });
+            });
         }
 
         $partners = $query->with('partnerProfile.services.category')->paginate(15);
