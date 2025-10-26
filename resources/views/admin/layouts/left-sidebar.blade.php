@@ -131,7 +131,7 @@
 
                 <!-- ✅ Settings menu -->
                 <li class="nav-item">
-                    <a href="{{ route('admin.settings.radius.edit') }}"
+                    <a href="{{ route('admin.settings.edit') }}"
                         class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-cog"></i>
                         <p>Settings</p>

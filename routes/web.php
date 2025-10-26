@@ -73,8 +73,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/reviews/{id}/approve', [ReviewController::class, 'approve'])->name('reviews.approve');
         Route::post('/reviews/{id}/reject', [ReviewController::class, 'reject'])->name('reviews.reject');
 
-        Route::get('settings/provider-radius', [SettingsController::class, 'edit'])->name('settings.radius.edit');
-        Route::put('settings/provider-radius', [SettingsController::class, 'update'])->name('settings.radius.update');
+        // routes/admin.php or routes/web.php
+        Route::prefix('settings')->name('settings.')->group(function () {
+            Route::get('/', [SettingsController::class, 'edit'])->name('edit');
+            Route::put('/', [SettingsController::class, 'update'])->name('update');
+        });
 
         // list + show (GET)
         Route::get('withdrawals', [WithdrawalAdminController::class, 'index'])->name('withdrawals.index');
