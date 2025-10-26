@@ -127,7 +127,7 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = Validator::make($request->all(), [
             'service_id'     => 'required|exists:services,id',
             'address_id'     => 'required|exists:user_addresses,id',
             'schedule_date'  => 'required|date|after_or_equal:today',
