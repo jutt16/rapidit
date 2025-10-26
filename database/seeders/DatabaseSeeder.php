@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             ServiceSeeder::class,
             StaticPagesSeeder::class,
             SettingsSeeder::class,
+            InitialDiscountSettingSeeder::class,
         ]);
     }
 }
