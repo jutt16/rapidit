@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\BookingRequest;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AutoDeletePendingBookings extends Command
 {
@@ -27,6 +28,8 @@ class AutoDeletePendingBookings extends Command
     {
         $cutoff = Carbon::now()->subMinutes(2);
 
+        Log::info('🕐 [AutoDeletePendingBookings] Starting process at: ' . now());
+
         DB::beginTransaction();
         try {
             // 1️⃣ Find bookings still pending and older than 2 minutes
@@ -34,23 +37,29 @@ class AutoDeletePendingBookings extends Command
                 ->where('created_at', '<', $cutoff)
                 ->get();
 
+            Log::info('🔍 Found ' . $expiredBookings->count() . ' pending bookings older than 2 minutes.');
+
             foreach ($expiredBookings as $booking) {
+                Log::info('🚮 Deleting booking ID: ' . $booking->id);
+
                 // 2️⃣ Expire all related booking requests
-                BookingRequest::where('booking_id', $booking->id)
+                $updated = BookingRequest::where('booking_id', $booking->id)
                     ->where('status', 'pending')
                     ->update(['status' => 'expired']);
 
+                Log::info('📦 Expired ' . $updated . ' related booking requests for booking ID: ' . $booking->id);
+
                 // 3️⃣ Delete or mark booking as cancelled
                 $booking->delete(); // 🚀 delete it completely
-                // OR use this instead if you want to mark instead of delete:
-                // $booking->update(['status' => 'expired']);
             }
 
             DB::commit();
 
-            $this->info('✅ Auto-delete completed. ' . count($expiredBookings) . ' expired bookings handled.');
+            Log::info('✅ Auto-delete completed. ' . $expiredBookings->count() . ' expired bookings handled.');
+            $this->info('✅ Auto-delete completed. ' . $expiredBookings->count() . ' expired bookings handled.');
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('❌ [AutoDeletePendingBookings] Error: ' . $e->getMessage());
             $this->error('❌ Error: ' . $e->getMessage());
         }
     }

@@ -117,6 +117,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/partner/stats', [PartnerStatsController::class, 'stats']);
 
+    Route::get('/maid/average-rating', [PartnerStatsController::class, 'maidAverageRating']);
+
     Route::get('/partner/reviews', [PartnerReviewController::class, 'index']);
 
     // Static pages
