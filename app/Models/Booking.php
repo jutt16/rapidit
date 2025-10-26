@@ -17,8 +17,13 @@ class Booking extends Model
         'amount',
         'tax',
         'total_amount',
+        'initial_discount_applied', // newly added
         'status', // newly added
         'service_time', // only for maid
+    ];
+
+    protected $casts = [
+        'initial_discount_applied' => 'boolean',
     ];
 
     /*
