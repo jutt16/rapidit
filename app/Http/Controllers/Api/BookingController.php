@@ -127,26 +127,48 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
-        $validated = Validator::make($request->all(), [
-            'service_id'     => 'required|exists:services,id',
-            'address_id'     => 'required|exists:user_addresses,id',
-            'schedule_date'  => 'required|date|after_or_equal:today',
-            'schedule_time'  => 'required|string',
-            'payment_method' => 'required|string',
-            'amount'         => 'required|numeric|min:0',
-            'tax'            => 'nullable|numeric|min:0',
-            'total_amount'   => 'required|numeric|min:0',
-            'service_time'   => 'nullable|numeric',
-        ]);
-
         try {
+            // -------------------------
+            // 1️⃣ Validation
+            // -------------------------
+            $rules = [
+                'service_id'     => 'required|exists:services,id',
+                'address_id'     => 'required|exists:user_addresses,id',
+                'schedule_date'  => 'required|date|after_or_equal:today',
+                'schedule_time'  => 'required|string', // format: "15:00-16:00"
+                'payment_method' => 'required|in:cod,razorpay',
+                'amount'         => 'required|numeric|min:0',
+                'tax'            => 'nullable|numeric|min:0',
+                'total_amount'   => 'required|numeric|min:0',
+                'service_time'   => 'nullable|integer',
+            ];
+
+            // Cook-specific validation
+            if ($request->service_id == 6) {
+                $rules = array_merge($rules, [
+                    'no_of_people' => 'required|integer|min:1',
+                    'food_type1'   => 'required|string',
+                    'food_type2'   => 'required|string',
+                    'no_of_dishes' => 'required|integer|min:1',
+                ]);
+            }
+
+            $validator = Validator::make($request->all(), $rules);
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+
             DB::beginTransaction();
 
-            $userId = auth()->id();
+            $user = $request->user();
+            $userId = $user->id;
 
-            // -----------------------------------------------------
-            // 1️⃣ Check if user has already received initial discount
-            // -----------------------------------------------------
+            // -------------------------
+            // 2️⃣ Check initial discount
+            // -------------------------
             $alreadyGotDiscount = Booking::where('user_id', $userId)
                 ->where('initial_discount_applied', true)
                 ->exists();
@@ -155,59 +177,111 @@ class BookingController extends Controller
             $totalAmount = $request->total_amount;
             $discountApplied = false;
 
-            // -----------------------------------------------------
-            // 2️⃣ Apply discount only if user never got it
-            // -----------------------------------------------------
             if (!$alreadyGotDiscount) {
-                $discountPercent = (float) \App\Models\Setting::get('initial_discount', 0);
-
+                $discountPercent = (float) Setting::get('initial_discount', 0);
                 if ($discountPercent > 0) {
                     $discountAmount = round(($amount * $discountPercent) / 100, 2);
                     $amountAfterDiscount = $amount - $discountAmount;
 
                     $amount = $amountAfterDiscount;
-                    $totalAmount = round($amountAfterDiscount + $request->tax, 2);
+                    $totalAmount = round($amountAfterDiscount + ($request->tax ?? 0), 2);
                     $discountApplied = true;
                 }
             }
 
-            // -----------------------------------------------------
-            // 3️⃣ Create booking
-            // -----------------------------------------------------
+            // -------------------------
+            // 3️⃣ Get user address
+            // -------------------------
+            $address = UserAddress::find($request->address_id);
+            if (!$address) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Address not found',
+                ], 404);
+            }
+
+            // -------------------------
+            // 4️⃣ Create booking
+            // -------------------------
             $booking = Booking::create([
-                'user_id'                 => $userId,
-                'service_id'              => $request->service_id,
-                'address_id'              => $request->address_id,
-                'schedule_date'           => $request->schedule_date,
-                'schedule_time'           => $request->schedule_time,
-                'payment_method'          => $request->payment_method,
-                'amount'                  => $amount,
-                'tax'                     => $request->tax ?? 0,
-                'total_amount'            => $totalAmount,
-                'service_time'            => $request->service_time,
-                'status'                  => 'pending',
+                'user_id'                  => $userId,
+                'service_id'               => $request->service_id,
+                'address_id'               => $request->address_id,
+                'schedule_date'            => $request->schedule_date,
+                'schedule_time'            => $request->schedule_time,
+                'payment_method'           => $request->payment_method,
+                'amount'                   => $amount,
+                'tax'                      => $request->tax ?? 0,
+                'total_amount'             => $totalAmount,
+                'service_time'             => $request->service_time,
+                'status'                   => 'pending',
                 'initial_discount_applied' => $discountApplied,
             ]);
 
-            // -----------------------------------------------------
-            // 4️⃣ Dispatch related booking logic (requests, payments, etc.)
-            // -----------------------------------------------------
-            // Example: send booking request to providers nearby
-            // $this->dispatchBookingRequests($booking);
+            // -------------------------
+            // 5️⃣ Cook-specific booking
+            // -------------------------
+            if ($request->service_id == 6) {
+                CookBooking::create([
+                    'booking_id'   => $booking->id,
+                    'no_of_people' => $request->no_of_people,
+                    'food_type1'   => $request->food_type1,
+                    'food_type2'   => $request->food_type2,
+                    'no_of_dishes' => $request->no_of_dishes,
+                ]);
+            }
 
-            // Example: handle payment gateway logic
-            // $this->processPayment($booking);
+            // -------------------------
+            // 6️⃣ Find nearby partners
+            // -------------------------
+            $lat = $address->latitude;
+            $lng = $address->longitude;
+            $radius = (float) (Setting::where('key', 'search_radius_km')->value('value') ?? 10);
+
+            $partners = PartnerProfile::selectRaw("
+            partner_profiles.*, 
+            (6371 * acos(
+                cos(radians(?)) * cos(radians(latitude)) *
+                cos(radians(longitude) - radians(?)) +
+                sin(radians(?)) * sin(radians(latitude))
+            )) AS distance
+        ", [$lat, $lng, $lat])
+                ->having("distance", "<", $radius)
+                ->orderBy("distance")
+                ->get();
+
+            // -------------------------
+            // 7️⃣ Filter available partners
+            // -------------------------
+            $availablePartners = $partners->filter(function ($partner) use ($request) {
+                $availability = PartnerAvailability::where('partner_id', $partner->user_id)->first();
+                if (!$availability) return false;
+
+                if (!empty($request->schedule_time)) {
+                    return $availability->isAvailableFor($request->schedule_date, $request->schedule_time);
+                }
+                return $availability->isAvailableForDateOnly($request->schedule_date);
+            });
+
+            // -------------------------
+            // 8️⃣ Create booking requests
+            // -------------------------
+            foreach ($availablePartners as $partner) {
+                BookingRequest::create([
+                    'booking_id' => $booking->id,
+                    'partner_id' => $partner->user_id,
+                    'status'     => 'pending',
+                ]);
+            }
 
             DB::commit();
 
-            // -----------------------------------------------------
-            // 5️⃣ Return JSON or redirect as before
-            // -----------------------------------------------------
             return response()->json([
                 'success' => true,
                 'message' => 'Booking created successfully.',
                 'booking' => $booking,
                 'initial_discount_applied' => $discountApplied,
+                'partners' => $availablePartners->pluck('user_id'),
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -215,10 +289,10 @@ class BookingController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong while creating booking.',
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
-
     /**
      * Reschedule a booking (user only)
      */
