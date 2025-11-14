@@ -44,6 +44,38 @@
                     </div>
                 </div>
 
+                {{-- Application Timezone --}}
+                <div class="form-group row mt-3">
+                    <label for="app_timezone" class="col-sm-2 col-form-label">Application Timezone</label>
+                    <div class="col-sm-4">
+                        <select name="app_timezone" id="app_timezone"
+                            class="form-control @error('app_timezone') is-invalid @enderror" required>
+                            @foreach($timezones as $timezone)
+                                <option value="{{ $timezone['value'] }}" {{ old('app_timezone', $app_timezone) === $timezone['value'] ? 'selected' : '' }}>
+                                    {{ $timezone['label'] }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('app_timezone')
+                        <span class="invalid-feedback">{{ $message }}</span>
+                        @enderror
+                        <small class="form-text text-muted">
+                            All system dates and times will use this timezone.
+                        </small>
+                    </div>
+                </div>
+
+                {{-- Current Time Preview --}}
+                <div class="form-group row mt-2">
+                    <label class="col-sm-2 col-form-label">Current Time</label>
+                    <div class="col-sm-4">
+                        <input type="text" id="current_time_preview" class="form-control" value="{{ $current_time }}" readonly>
+                        <small class="form-text text-muted">
+                            Updates live for the selected timezone. Save to apply globally.
+                        </small>
+                    </div>
+                </div>
+
                 <div class="form-group row mt-4">
                     <div class="col-sm-6">
                         <button type="submit" class="btn btn-primary">
@@ -59,4 +91,47 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('customJS')
+<script>
+    (function () {
+        const timezoneSelect = document.getElementById('app_timezone');
+        const currentTimeInput = document.getElementById('current_time_preview');
+
+        if (!timezoneSelect || !currentTimeInput) {
+            return;
+        }
+
+        const formatDate = (date, timeZone) => {
+            try {
+                const parts = new Intl.DateTimeFormat('en-GB', {
+                    timeZone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false,
+                }).formatToParts(date);
+
+                const get = (type) => parts.find((part) => part.type === type)?.value || '';
+
+                return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`;
+            } catch (error) {
+                return 'Invalid timezone';
+            }
+        };
+
+        const updatePreview = () => {
+            const tz = timezoneSelect.value;
+            currentTimeInput.value = formatDate(new Date(), tz);
+        };
+
+        timezoneSelect.addEventListener('change', updatePreview);
+        updatePreview();
+        setInterval(updatePreview, 1000);
+    })();
+</script>
 @endsection

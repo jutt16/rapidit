@@ -13,5 +13,15 @@ class SettingsSeeder extends Seeder
             ['key' => 'provider_radius'],
             ['value' => '10', 'type' => 'float', 'description' => 'Default provider search radius in km']
         );
+
+        Setting::updateOrCreate(
+            ['key' => 'initial_discount'],
+            ['value' => '5', 'type' => 'float', 'description' => 'Default initial discount percentage']
+        );
+
+        Setting::updateOrCreate(
+            ['key' => 'app_timezone'],
+            ['value' => config('app.timezone'), 'type' => 'string', 'description' => 'Application timezone']
+        );
     }
 }
