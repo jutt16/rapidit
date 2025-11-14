@@ -42,6 +42,7 @@ class WithdrawalAdminController extends Controller
 
             // mark as processing and record who started it
             $w->update(['status' => 'processing', 'processed_by' => $admin->id]);
+            $w->syncWalletTransactionNote('processing');
 
             // --- Synchronous provider call (replace callProvider with real logic) ---
             $providerResult = $this->callProvider($w);
@@ -53,6 +54,7 @@ class WithdrawalAdminController extends Controller
                     'utr' => $providerResult['utr'] ?? ($providerResult['tx_id'] ?? $w->utr),
                     'processed_at' => now()
                 ]);
+                $w->syncWalletTransactionNote('completed');
                 DB::commit();
                 return redirect()->route('admin.withdrawals.show', $w->id)->with('success', 'Withdrawal paid successfully.');
             } else {
@@ -62,6 +64,7 @@ class WithdrawalAdminController extends Controller
                     'admin_note' => $providerResult['message'] ?? 'Provider error',
                     'processed_at' => now()
                 ]);
+                $w->syncWalletTransactionNote('rejected');
 
                 // refund reserved funds back to user's wallet
                 $wallet = $w->user->wallet()->lockForUpdate()->first();
@@ -101,6 +104,7 @@ class WithdrawalAdminController extends Controller
                 'processed_by' => $admin->id,
                 'processed_at' => now()
             ]);
+            $w->syncWalletTransactionNote('rejected');
 
             // Refund
             $wallet = $w->user->wallet()->lockForUpdate()->first();
@@ -139,6 +143,7 @@ class WithdrawalAdminController extends Controller
                 'processed_by' => $admin->id,
                 'processed_at' => now()
             ]);
+            $w->syncWalletTransactionNote('completed');
 
             DB::commit();
             return redirect()->route('admin.withdrawals.show', $w->id)->with('success', 'Withdrawal marked as paid.');

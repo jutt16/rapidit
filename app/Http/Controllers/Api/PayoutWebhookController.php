@@ -95,6 +95,7 @@ class PayoutWebhookController extends Controller
                         );
                     }
                 }
+                $withdrawal->syncWalletTransactionNote('completed');
             } elseif (in_array($status, ['failed', 'reversed', 'cancelled'])) {
                 if (!in_array($withdrawal->status, ['failed', 'cancelled'])) {
                     // refund amount + fee
@@ -118,6 +119,7 @@ class PayoutWebhookController extends Controller
                         );
                     }
                 }
+                $withdrawal->syncWalletTransactionNote('failed');
             }
 
             $withdrawal->save();
@@ -194,6 +196,7 @@ class PayoutWebhookController extends Controller
                             );
                         }
                     }
+                    $withdrawal->syncWalletTransactionNote('completed');
                 } elseif (in_array($status, ['failed', 'reversed', 'cancelled'])) {
                     if (!in_array($withdrawal->status, ['failed', 'cancelled'])) {
                         // refund amount + fee
@@ -217,6 +220,7 @@ class PayoutWebhookController extends Controller
                             );
                         }
                     }
+                    $withdrawal->syncWalletTransactionNote('failed');
                 }
 
                 $withdrawal->save();

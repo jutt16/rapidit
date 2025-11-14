@@ -94,7 +94,7 @@ class WithdrawalController extends Controller
 
             // debit funds safely
             try {
-                $wallet->debit($total, 'Withdrawal request (pending)');
+                $debitTransaction = $wallet->debit($total, 'Withdrawal request (pending)');
             } catch (\Exception $e) {
                 DB::rollBack();
                 return response()->json([
@@ -112,7 +112,10 @@ class WithdrawalController extends Controller
                 'currency' => $banking->currency ?? 'PKR',
                 'status' => 'processing',
                 'reference' => Str::uuid(),
+                'wallet_transaction_id' => $debitTransaction->id ?? null,
             ]);
+
+            $withdrawal->syncWalletTransactionNote('processing');
 
             DB::commit();
 
@@ -154,6 +157,7 @@ class WithdrawalController extends Controller
                     $withdrawal->status = 'failed';
                     $withdrawal->failure_reason = $payoutEx->getMessage();
                     $withdrawal->save();
+                    $withdrawal->syncWalletTransactionNote('failed');
 
                     DB::commit();
                 } catch (\Throwable $refundEx) {
@@ -214,6 +218,7 @@ class WithdrawalController extends Controller
             $wallet->credit($refundAmount, 'Withdrawal cancelled refund');
 
             $w->update(['status' => 'cancelled', 'admin_note' => 'Cancelled by user']);
+            $w->syncWalletTransactionNote('cancelled');
 
             DB::commit();
             return response()->json(['success' => true]);
