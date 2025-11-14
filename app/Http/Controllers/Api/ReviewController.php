@@ -172,4 +172,64 @@ class ReviewController extends Controller
             ]);
         }
     }
+
+    /**
+     * Get random reviews from users
+     * GET /api/reviews/random?count={number}
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function randomReviews(Request $request)
+    {
+        $request->validate([
+            'count' => 'nullable|integer|min:1|max:50',
+            'rating_min' => 'nullable|integer|min:1|max:5',
+            'reviewer_type' => 'nullable|in:user,partner',
+        ]);
+
+        $count = $request->input('count', 10); // default 10 reviews
+        $ratingMin = $request->input('rating_min'); // optional minimum rating filter
+        $reviewerType = $request->input('reviewer_type'); // optional filter by reviewer type
+
+        $query = Review::query()
+            ->with(['user:id,name', 'partner:id,name', 'partner.partnerProfile:user_id,full_name', 'booking:id,service_id'])
+            ->whereNotNull('comment'); // only get reviews with comments
+
+        // Apply rating filter if provided
+        if ($ratingMin) {
+            $query->where('rating', '>=', $ratingMin);
+        }
+
+        // Apply reviewer type filter if provided
+        if ($reviewerType) {
+            $query->where('reviewer_type', $reviewerType);
+        }
+
+        // Get random reviews
+        $reviews = $query->inRandomOrder()
+            ->limit($count)
+            ->get()
+            ->map(function ($review) {
+                return [
+                    'id' => $review->id,
+                    'rating' => $review->rating,
+                    'comment' => $review->comment,
+                    'status' => $review->status,
+                    'reviewer_type' => $review->reviewer_type,
+                    'reviewer_name' => $review->reviewer_type === 'user' 
+                        ? ($review->user->name ?? 'Anonymous')
+                        : ($review->partner->partnerProfile->full_name ?? 'Anonymous'),
+                    'booking_id' => $review->booking_id,
+                    'created_at' => $review->created_at->format('Y-m-d H:i:s'),
+                    'created_ago' => $review->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $reviews,
+            'count' => $reviews->count(),
+        ]);
+    }
 }

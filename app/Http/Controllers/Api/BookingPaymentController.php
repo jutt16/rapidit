@@ -93,6 +93,21 @@ class BookingPaymentController extends Controller
         $payment->status = 'paid';
         $payment->save();
 
+        // Send payment confirmation notification to user
+        $bookingUser = $booking->user;
+        if ($bookingUser) {
+            app(\App\Services\FcmService::class)->sendToUser(
+                $bookingUser,
+                'Payment Confirmed',
+                "Your COD payment of ₹{$payment->amount} has been confirmed",
+                [
+                    'type' => 'payment_confirmed',
+                    'booking_id' => (string)$booking->id,
+                    'amount' => (string)$payment->amount,
+                ]
+            );
+        }
+
         return response()->json(['success' => true, 'message' => 'Payment marked as paid successfully.', 'data' => $payment]);
     }
 

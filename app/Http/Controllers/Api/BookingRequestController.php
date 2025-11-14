@@ -105,8 +105,24 @@ class BookingRequestController extends Controller
                 ->update(['status' => 'expired']);
 
             // ✅ Update booking status
-            Booking::findOrFail($bookingRequest->booking_id)
-                ->update(['status' => 'accepted', 'partner_id' => $user->id]);
+            $booking = Booking::findOrFail($bookingRequest->booking_id);
+            $booking->update(['status' => 'accepted', 'partner_id' => $user->id]);
+
+            // Send notification to user
+            $bookingUser = $booking->user;
+            if ($bookingUser) {
+                $partnerName = $user->partnerProfile->full_name ?? $user->name;
+                app(\App\Services\FcmService::class)->sendToUser(
+                    $bookingUser,
+                    'Booking Accepted',
+                    "Your booking has been accepted by {$partnerName}",
+                    [
+                        'type' => 'booking_accepted',
+                        'booking_id' => (string)$booking->id,
+                        'partner_id' => (string)$user->id,
+                    ]
+                );
+            }
 
             return response()->json([
                 'success' => true,

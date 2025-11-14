@@ -9,11 +9,14 @@
     <div class="card shadow-sm">
         <div class="card-header">
             <div class="row align-items-center g-2">
-                <div class="col-md-8 col-sm-12">
+                <div class="col-md-6 col-sm-12">
                     <h3 class="card-title mb-0">Partner List</h3>
+                    <a href="{{ route('admin.partners.export', request()->query()) }}" class="btn btn-success btn-sm ml-2">
+                        <i class="fas fa-file-excel"></i> Export CSV
+                    </a>
                 </div>
 
-                <div class="col-md-4 col-sm-12">
+                <div class="col-md-6 col-sm-12">
                     <form method="GET" class="d-flex flex-wrap align-items-center justify-content-end" style="gap: 6px;">
                         <!-- Status Filter -->
                         <select name="status" class="form-control form-control-sm w-auto">
@@ -54,9 +57,11 @@
             <table class="table table-hover text-nowrap mb-0">
                 <thead class="thead-light">
                     <tr>
-                        <th>#</th>
+                        <th>Expert ID</th>
                         <th>Name</th>
                         <th>Phone</th>
+                        <th>Expert Location</th>
+                        <th>New Partner Signup Date</th>
                         <th>Status</th>
                         <th>Verified</th>
                         <th>Actions</th>
@@ -65,9 +70,26 @@
                 <tbody>
                     @forelse($partners as $index => $partner)
                     <tr>
-                        <td>{{ $partners->firstItem() + $index }}</td>
+                        <td>#{{ $partner->id }}</td>
                         <td>{{ $partner->partnerProfile?->full_name ?? $partner->name ?? 'N/A' }}</td>
                         <td>{{ $partner->phone ?? 'N/A' }}</td>
+                        <td>
+                            @php
+                                $primaryAddress = $partner->addresses->first();
+                                $geoProfile = $partner->partnerProfile;
+                            @endphp
+                            @if($primaryAddress)
+                                <span class="d-block">{{ $primaryAddress->city ?? 'City N/A' }}, {{ $primaryAddress->state ?? 'State N/A' }}</span>
+                                <small class="text-muted">{{ $primaryAddress->addressLine ?? '' }}</small>
+                            @elseif(!empty($geoProfile?->latitude) && !empty($geoProfile?->longitude))
+                                <span class="text-monospace small">{{ $geoProfile->latitude }}, {{ $geoProfile->longitude }}</span>
+                            @else
+                                <span class="text-muted">Not set</span>
+                            @endif
+                        </td>
+                        <td>
+                            {{ $partner->created_at?->format('d M Y H:i') ?? '—' }}
+                        </td>
                         <td>
                             <span class="badge 
                                 @if($partner->partner_status == 'pending') bg-warning

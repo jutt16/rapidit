@@ -7,9 +7,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PartnerProfile;
+use App\Services\ZoneCoverageService;
 
 class PartnerProfileController extends Controller
 {
+    protected ZoneCoverageService $zoneCoverage;
+
+    public function __construct(ZoneCoverageService $zoneCoverage)
+    {
+        $this->zoneCoverage = $zoneCoverage;
+    }
+
     public function index()
     {
         try {
@@ -50,8 +58,8 @@ class PartnerProfileController extends Controller
                 'languages' => 'nullable|array',
                 'languages.*' => 'string',
                 'years_of_experience' => 'nullable|integer',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
+                'latitude' => 'required|numeric|between:-90,90',
+                'longitude' => 'required|numeric|between:-180,180',
 
                 'aadhar_card' => 'nullable|file|mimes:jpg,jpeg,png,pdf',
                 'pan_card' => 'nullable|file|mimes:jpg,jpeg,png,pdf',
@@ -100,6 +108,11 @@ class PartnerProfileController extends Controller
                     $data[$field] = $request->file($field)->store('partners/' . $user->id, 'public');
                 }
             }
+
+            $this->zoneCoverage->assertWithinActiveZone(
+                $request->input('latitude'),
+                $request->input('longitude')
+            );
 
             $profile = PartnerProfile::create($data);
 
@@ -174,8 +187,8 @@ class PartnerProfileController extends Controller
                 'languages' => 'nullable|array',
                 'languages.*' => 'string',
                 'years_of_experience' => 'nullable|integer',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
+                'latitude' => 'sometimes|required_with:longitude|numeric|between:-90,90',
+                'longitude' => 'sometimes|required_with:latitude|numeric|between:-180,180',
                 'service_ids' => 'nullable|array',
                 'service_ids.*' => 'integer|exists:services,id',
             ]);
@@ -216,6 +229,12 @@ class PartnerProfileController extends Controller
                     }
                     $data[$field] = $request->file($field)->store('partners/' . $user->id, 'public');
                 }
+            }
+
+            if ($request->hasAny(['latitude', 'longitude'])) {
+                $latitude = $request->input('latitude', $profile->latitude);
+                $longitude = $request->input('longitude', $profile->longitude);
+                $this->zoneCoverage->assertWithinActiveZone($latitude, $longitude);
             }
 
             $profile->update($data);

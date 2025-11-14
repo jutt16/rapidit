@@ -12,12 +12,21 @@ use App\Models\PartnerAvailability;
 use App\Models\PartnerProfile;
 use App\Models\UserAddress;
 use App\Models\Setting; // ✅ added
+use App\Services\ZoneCoverageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
+    protected ZoneCoverageService $zoneCoverage;
+
+    public function __construct(ZoneCoverageService $zoneCoverage)
+    {
+        $this->zoneCoverage = $zoneCoverage;
+    }
+
     public function index(Request $request)
     {
         try {
@@ -200,6 +209,19 @@ class BookingController extends Controller
                 ], 404);
             }
 
+            if ($address->latitude === null || $address->longitude === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Selected address is missing coordinates. Please update the address location.',
+                ], 422);
+            }
+
+            $this->zoneCoverage->assertWithinActiveZone(
+                (float) $address->latitude,
+                (float) $address->longitude,
+                'address_id'
+            );
+
             // -------------------------
             // 4️⃣ Create booking
             // -------------------------
@@ -267,11 +289,26 @@ class BookingController extends Controller
             // 8️⃣ Create booking requests
             // -------------------------
             foreach ($availablePartners as $partner) {
-                BookingRequest::create([
+                $request = BookingRequest::create([
                     'booking_id' => $booking->id,
                     'partner_id' => $partner->user_id,
                     'status'     => 'pending',
                 ]);
+                
+                // Send notification to partner
+                $partnerUser = \App\Models\User::find($partner->user_id);
+                if ($partnerUser) {
+                    app(\App\Services\FcmService::class)->sendToUser(
+                        $partnerUser,
+                        'New Booking Request',
+                        "You have a new booking request for {$booking->service->name}",
+                        [
+                            'type' => 'new_booking_request',
+                            'booking_id' => (string)$booking->id,
+                            'request_id' => (string)$request->id,
+                        ]
+                    );
+                }
             }
 
             DB::commit();
@@ -283,6 +320,12 @@ class BookingController extends Controller
                 'initial_discount_applied' => $discountApplied,
                 'partners' => $availablePartners->pluck('user_id'),
             ], 201);
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Booking Store Error: ' . $e->getMessage());
@@ -410,6 +453,33 @@ class BookingController extends Controller
                     'amount' => $booking->amount + $commissionAmount,
                     'description' => "COD settlement & commission deduction for booking #{$booking->id}",
                 ]);
+            }
+
+            // Send notifications to both user and partner
+            $bookingUser = $booking->user;
+            if ($bookingUser) {
+                app(\App\Services\FcmService::class)->sendToUser(
+                    $bookingUser,
+                    'Booking Completed',
+                    "Your booking has been completed successfully",
+                    [
+                        'type' => 'booking_completed',
+                        'booking_id' => (string)$booking->id,
+                    ]
+                );
+            }
+
+            if ($partner) {
+                app(\App\Services\FcmService::class)->sendToUser(
+                    $partner,
+                    'Booking Completed',
+                    "You have earned ₹{$partnerEarning} from booking #{$booking->id}",
+                    [
+                        'type' => 'booking_completed',
+                        'booking_id' => (string)$booking->id,
+                        'earning' => (string)$partnerEarning,
+                    ]
+                );
             }
 
             return response()->json([
@@ -554,10 +624,48 @@ class BookingController extends Controller
                 ->each->update(['status' => 'expired']);
 
             $booking->update(['status' => 'cancelled']);
+
+            // Send notification to user
+            app(\App\Services\FcmService::class)->sendToUser(
+                $user,
+                'Booking Cancelled',
+                'Your booking has been cancelled' . ($charge > 0 ? '. Cancellation charges may apply.' : '.'),
+                [
+                    'type' => 'booking_cancelled',
+                    'booking_id' => (string)$booking->id,
+                ]
+            );
+
+            // Send notification to partner
+            if ($accepted) {
+                $partner = $accepted->partner;
+                if ($partner) {
+                    app(\App\Services\FcmService::class)->sendToUser(
+                        $partner,
+                        'Booking Cancelled',
+                        "Booking #{$booking->id} has been cancelled by the customer",
+                        [
+                            'type' => 'booking_cancelled',
+                            'booking_id' => (string)$booking->id,
+                        ]
+                    );
+                }
+            }
         } else {
             // ✅ Case 2: no accepted → no charges
             $requests->each->update(['status' => 'expired']);
             $booking->update(['status' => 'cancelled']);
+
+            // Send notification to user
+            app(\App\Services\FcmService::class)->sendToUser(
+                $user,
+                'Booking Cancelled',
+                'Your booking has been cancelled successfully',
+                [
+                    'type' => 'booking_cancelled',
+                    'booking_id' => (string)$booking->id,
+                ]
+            );
         }
 
         return response()->json([

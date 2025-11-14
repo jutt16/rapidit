@@ -105,6 +105,14 @@
                     </a>
                 </li>
 
+                <li class="nav-item">
+                    <a href="{{ route('admin.zones.index') }}"
+                        class="nav-link {{ request()->routeIs('admin.zones.*') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-draw-polygon"></i>
+                        <p>Zones</p>
+                    </a>
+                </li>
+
                 <!-- Revies Management -->
                 <li class="nav-item">
                     <a href="{{ route('admin.reviews.index') }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}">

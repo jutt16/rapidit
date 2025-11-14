@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('reviews', function (Blueprint $table) {
-            $table->enum('reviewer_type', ['user', 'partner'])->after('partner_id');
-        });
+        if (!Schema::hasColumn('reviews', 'reviewer_type')) {
+            Schema::table('reviews', function (Blueprint $table) {
+                $table->enum('reviewer_type', ['user', 'partner'])->after('partner_id');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('reviews', function (Blueprint $table) {
-            $table->dropColumn('reviewer_type');
-        });
+        if (Schema::hasColumn('reviews', 'reviewer_type')) {
+            Schema::table('reviews', function (Blueprint $table) {
+                $table->dropColumn('reviewer_type');
+            });
+        }
     }
 };

@@ -2,7 +2,12 @@
 
 @section('content')
 <div class="container-fluid">
-    <h2 class="fw-bold mb-4">📩 Support & Feedback</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">📩 Support & Feedback</h2>
+        <a href="{{ route('admin.support.export') }}" class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Export CSV
+        </a>
+    </div>
     <div class="card shadow-sm">
         <div class="card-body">
             <table class="table table-striped">

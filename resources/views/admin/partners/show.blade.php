@@ -12,6 +12,86 @@
     </div>
 
     @include('admin.layouts.messages')
+    @php
+        $partnerProfile = $user->partnerProfile;
+    @endphp
+
+    @isset($partnerStats)
+    <div class="card card-light border shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h3 class="card-title mb-0"><i class="fas fa-chart-line me-2"></i> Lifetime Partner Performance</h3>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="info-box bg-white border h-100 shadow-sm">
+                        <span class="info-box-icon text-primary"><i class="fas fa-mail-bulk"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text text-muted text-uppercase small">Total Requests</span>
+                            <span class="info-box-number h3 mb-0">{{ number_format($partnerStats['total_requests'] ?? 0) }}</span>
+                            <span class="text-muted small">All time</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @php
+                $statusCards = [
+                    ['label' => 'Accepted', 'value' => $partnerStats['accepted_requests'] ?? 0, 'icon' => 'check-circle', 'color' => 'text-success', 'sub' => 'Requests'],
+                    ['label' => 'Rejected', 'value' => $partnerStats['rejected_requests'] ?? 0, 'icon' => 'times-circle', 'color' => 'text-danger', 'sub' => 'Requests'],
+                    ['label' => 'Completed', 'value' => $partnerStats['completed_jobs'] ?? 0, 'icon' => 'flag-checkered', 'color' => 'text-info', 'sub' => 'Jobs'],
+                    ['label' => 'Cancelled', 'value' => $partnerStats['cancelled_jobs'] ?? 0, 'icon' => 'ban', 'color' => 'text-warning', 'sub' => 'Jobs'],
+                ];
+                $earnings = $partnerStats['earnings'] ?? ['lifetime' => 0, 'mtd' => 0, 'ytd' => 0];
+            @endphp
+
+            <div class="row g-3">
+                @foreach($statusCards as $card)
+                <div class="col-sm-6 col-lg-3">
+                    <div class="info-box bg-white border h-100 shadow-sm">
+                        <span class="info-box-icon {{ $card['color'] }}"><i class="fas fa-{{ $card['icon'] }}"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text text-muted text-uppercase small">{{ $card['label'] }}</span>
+                            <span class="info-box-number h4 mb-0">{{ number_format($card['value']) }}</span>
+                            <span class="text-muted small">{{ $card['sub'] }}</span>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+
+            <div class="row g-3 mt-1">
+                <div class="col-md-4">
+                    <div class="info-box bg-white border h-100 shadow-sm">
+                        <span class="info-box-icon text-success"><i class="fas fa-rupee-sign"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text text-muted text-uppercase small">Lifetime Earnings</span>
+                            <span class="info-box-number h4 mb-0">&#8377;{{ number_format($earnings['lifetime'] ?? 0, 2) }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-box bg-white border h-100 shadow-sm">
+                        <span class="info-box-icon text-primary"><i class="fas fa-calendar-alt"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text text-muted text-uppercase small">MTD Earnings</span>
+                            <span class="info-box-number h4 mb-0">&#8377;{{ number_format($earnings['mtd'] ?? 0, 2) }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-box bg-white border h-100 shadow-sm">
+                        <span class="info-box-icon text-dark"><i class="fas fa-calendar"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text text-muted text-uppercase small">YTD Earnings</span>
+                            <span class="info-box-number h4 mb-0">&#8377;{{ number_format($earnings['ytd'] ?? 0, 2) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endisset
 
     <!-- Partner Info Card -->
     <div class="card card-primary card-outline shadow-sm mb-4">
@@ -36,7 +116,8 @@
                 <div class="table-responsive">
                     <table class="table table-striped">
                         <tbody>
-                            <tr><th style="width: 30%">Phone:</th><td>{{ $user->phone }}</td></tr>
+                            <tr><th style="width: 30%">Expert ID:</th><td>#{{ $user->id }}</td></tr>
+                            <tr><th>Phone:</th><td>{{ $user->phone }}</td></tr>
                             <tr>
                                 <th>Phone Verified:</th>
                                 <td>{!! $user->phone_verified ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No</span>' !!}</td>
@@ -52,10 +133,52 @@
                                     </span>
                                 </td>
                             </tr>
-                            <tr><th>Gender:</th><td>{{ $user->partnerProfile->gender ?? 'N/A' }}</td></tr>
+                            <tr><th>Gender:</th><td>{{ optional($partnerProfile)->gender ?? 'N/A' }}</td></tr>
                             <tr><th>Date of Birth:</th><td>{{ optional($user->partnerProfile?->date_of_birth)->format('d-m-Y') ?? 'N/A' }}</td></tr>
-                            <tr><th>Experience:</th><td>{{ $user->partnerProfile->years_of_experience ?? 'N/A' }} years</td></tr>
-                            <tr><th>Languages:</th><td>{{ $user->partnerProfile->languages ? implode(', ', $user->partnerProfile->languages) : 'N/A' }}</td></tr>
+                            <tr>
+                                <th>Experience:</th>
+                                <td>
+                                    @if(!is_null(optional($partnerProfile)->years_of_experience))
+                                        {{ optional($partnerProfile)->years_of_experience }} years
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                            </tr>
+                            @php
+                                $languages = optional($partnerProfile)->languages;
+                                if (is_string($languages)) {
+                                    $decoded = json_decode($languages, true);
+                                    $languages = json_last_error() === JSON_ERROR_NONE ? $decoded : explode(',', $languages);
+                                }
+                            @endphp
+                            <tr>
+                                <th>Languages:</th>
+                                <td>
+                                    @if(is_array($languages) && count($languages))
+                                        {{ implode(', ', $languages) }}
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Location:</th>
+                                <td>
+                                    @php
+                                        $primaryAddress = $user->addresses->first();
+                                        $geoProfile = $user->partnerProfile;
+                                    @endphp
+                                    @if($primaryAddress)
+                                        {{ trim(($primaryAddress->city ?? '') . ', ' . ($primaryAddress->state ?? ''), ', ') }}
+                                        <small class="text-muted d-block">{{ $primaryAddress->addressLine }}</small>
+                                    @elseif(!empty($geoProfile?->latitude) && !empty($geoProfile?->longitude))
+                                        <span class="text-monospace small">{{ $geoProfile->latitude }}, {{ $geoProfile->longitude }}</span>
+                                    @else
+                                        <span class="text-muted">Not set</span>
+                                    @endif
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -142,12 +265,12 @@
         <div class="card-body row">
             @php
                 $docs = [
-                    'Aadhar Card' => $user->partnerProfile->aadhar_card ?? null,
-                    'PAN Card' => $user->partnerProfile->pan_card ?? null,
-                    'Police Verification' => $user->partnerProfile->police_verification ?? null,
-                    'Covid Certificate' => $user->partnerProfile->covid_vaccination_certificate ?? null,
-                    'Selfie with Costume' => $user->partnerProfile->selfie_with_costume ?? null,
-                    'Intro Video' => $user->partnerProfile->intro_video ?? null,
+                    'Aadhar Card' => optional($partnerProfile)->aadhar_card,
+                    'PAN Card' => optional($partnerProfile)->pan_card,
+                    'Police Verification' => optional($partnerProfile)->police_verification,
+                    'Covid Certificate' => optional($partnerProfile)->covid_vaccination_certificate,
+                    'Selfie with Costume' => optional($partnerProfile)->selfie_with_costume,
+                    'Intro Video' => optional($partnerProfile)->intro_video,
                 ];
             @endphp
 

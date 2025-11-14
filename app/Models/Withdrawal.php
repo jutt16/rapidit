@@ -16,7 +16,12 @@ class Withdrawal extends Model
         'reference',
         'admin_note',
         'processed_by',
-        'processed_at'
+        'processed_at',
+        'gateway',
+        'gateway_payout_id',
+        'gateway_status',
+        'utr',
+        'failure_reason'
     ];
 
     public function user()

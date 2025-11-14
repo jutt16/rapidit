@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use App\Models\Withdrawal;
 use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\Validator;
+use App\Services\RazorpayPayoutService;
 
 class WithdrawalController extends Controller
 {
@@ -28,6 +29,7 @@ class WithdrawalController extends Controller
                     'currency' => $w->currency,
                     'status' => $w->status,
                     'reference' => $w->reference,
+                    'utr' => $w->utr,
                     'banking_detail' => [
                         'id' => $w->bankingDetail->id,
                         'bank_name' => $w->bankingDetail->bank_name,
@@ -108,17 +110,62 @@ class WithdrawalController extends Controller
                 'amount' => $amount,
                 'fee' => $fee,
                 'currency' => $banking->currency ?? 'PKR',
-                'status' => 'pending',
+                'status' => 'processing',
                 'reference' => Str::uuid(),
             ]);
 
             DB::commit();
 
-            // (Optional) notify admin / fire event
-            return response()->json([
-                'success' => true,
-                'data' => $withdrawal,
-            ], 201);
+            // Send notification to user
+            app(\App\Services\FcmService::class)->sendToUser(
+                $user,
+                'Withdrawal Initiated',
+                "Your withdrawal request of ₹{$amount} is being processed",
+                [
+                    'type' => 'withdrawal_initiated',
+                    'withdrawal_id' => (string)$withdrawal->id,
+                    'amount' => (string)$amount,
+                ]
+            );
+
+            // Trigger RazorpayX payout
+            try {
+                $service = app(RazorpayPayoutService::class);
+                $payout = $service->createPayout($withdrawal, $banking);
+
+                $withdrawal->gateway = 'razorpay';
+                $withdrawal->gateway_payout_id = $payout['id'] ?? null;
+                $withdrawal->gateway_status = $payout['status'] ?? 'processing';
+                $withdrawal->save();
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $withdrawal,
+                ], 201);
+            } catch (\Throwable $payoutEx) {
+                \Log::error('withdrawal.payout '.$payoutEx->getMessage());
+
+                // rollback funds to wallet and mark withdrawal failed
+                DB::beginTransaction();
+                try {
+                    $wallet = $user->wallet()->lockForUpdate()->first();
+                    $wallet->credit($total, 'Withdrawal failed refund');
+
+                    $withdrawal->status = 'failed';
+                    $withdrawal->failure_reason = $payoutEx->getMessage();
+                    $withdrawal->save();
+
+                    DB::commit();
+                } catch (\Throwable $refundEx) {
+                    DB::rollBack();
+                    \Log::error('withdrawal.refund '.$refundEx->getMessage());
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Could not initiate payout',
+                ], 502);
+            }
         } catch (\Throwable $ex) {
             DB::rollBack();
             \Log::error('withdrawal.create ' . $ex->getMessage());
@@ -139,12 +186,13 @@ class WithdrawalController extends Controller
             'amount' => $w->amount,
             'fee' => $w->fee,
             'status' => $w->status,
+            'reference' => $w->reference,
+            'utr' => $w->utr,
             'banking_detail' => [
                 'id' => $w->bankingDetail->id,
                 'bank_name' => $w->bankingDetail->bank_name,
                 'account_number_masked' => $w->bankingDetail->masked_account()
             ],
-            'reference' => $w->reference,
             'created_at' => $w->created_at
         ]]);
     }
@@ -180,7 +228,7 @@ class WithdrawalController extends Controller
     protected function calculateFee(float $amount): float
     {
         // example: 1% min 10
-        $fee = max(round($amount * 0.01, 2), 10.0);
+        $fee = 0; //max(round($amount * 0.01, 2), 10.0);
         return $fee;
     }
 }

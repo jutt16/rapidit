@@ -17,6 +17,8 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StaticPageController;
 use App\Http\Controllers\Admin\SupportController;
 use App\Http\Controllers\Admin\WithdrawalAdminController;
+use App\Http\Controllers\Admin\SearchController;
+use App\Http\Controllers\Admin\ZoneController;
 use App\Http\Controllers\PartnerRechargeController;
 use App\Http\Controllers\RazorpayPaymentController;
 
@@ -24,6 +26,10 @@ Route::get('/', function () {
     // return redirect()->route('admin.login');
     return view('home.index');
 })->name('home');
+
+Route::get('/login', function (){
+    return redirect()->route('home');
+})->name('login');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -34,6 +40,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        Route::get('/search', [SearchController::class, 'index'])->name('search');
+
+        // Export routes
+        Route::get('/users/export/csv', [UserController::class, 'export'])->name('users.export');
+        Route::get('/partners/export/csv', [PartnerController::class, 'export'])->name('partners.export');
+        Route::get('/bookings/export/csv', [BookingController::class, 'export'])->name('bookings.export');
+        Route::get('/withdrawals/export/csv', [WithdrawalAdminController::class, 'export'])->name('withdrawals.export');
+        Route::get('/reviews/export/csv', [ReviewController::class, 'export'])->name('reviews.export');
+        Route::get('/support/export/csv', [SupportController::class, 'export'])->name('support.export');
 
         Route::resource('users', UserController::class);
 
@@ -57,6 +73,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('maid-pricings', \App\Http\Controllers\Admin\MaidPricingController::class);
 
         Route::resource('services', ServiceController::class);
+
+        Route::resource('zones', ZoneController::class)->except(['show']);
 
         // Static Pages
         Route::get('/static-pages', [StaticPageController::class, 'index'])->name('static-pages.index');
@@ -83,10 +101,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('withdrawals', [WithdrawalAdminController::class, 'index'])->name('withdrawals.index');
         Route::get('withdrawals/{id}', [WithdrawalAdminController::class, 'show'])->name('withdrawals.show');
 
-        // actions (POST)
-        Route::post('withdrawals/{id}/approve', [WithdrawalAdminController::class, 'approve'])->name('withdrawals.approve');
-        Route::post('withdrawals/{id}/reject', [WithdrawalAdminController::class, 'reject'])->name('withdrawals.reject');
-        Route::post('withdrawals/{id}/mark-paid', [WithdrawalAdminController::class, 'markPaid'])->name('withdrawals.markPaid');
+        // actions removed: admin can only view history
 
         // logout route
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -94,7 +109,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 });
 
 Route::get('razorpay-payment/{id}', [RazorpayPaymentController::class, 'index'])
-    ->withoutMiddleware(['auth'])
+    ->withoutMiddleware(['*'])
     ->name('razorpay.pay');
 
 Route::post('razorpay-verify', [RazorpayPaymentController::class, 'verifyPayment'])

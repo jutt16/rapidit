@@ -2,7 +2,12 @@
 
 @section('content')
 <div class="container">
-    <h1>Withdrawals</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Withdrawals</h1>
+        <a href="{{ route('admin.withdrawals.export', request()->query()) }}" class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Export CSV
+        </a>
+    </div>
 
     @include('admin.layouts.messages')
 
@@ -11,10 +16,12 @@
             <tr>
                 <th>ID</th>
                 <th>User</th>
+                <th>Expert ID</th>
                 <th>Amount</th>
                 <th>Fee</th>
                 <th>Bank</th>
                 <th>Account</th>
+                <th>UTR</th>
                 <th>Status</th>
                 <th>Requested At</th>
                 <th>Actions</th>
@@ -25,10 +32,12 @@
             <tr>
                 <td>{{ $w->id }}</td>
                 <td>{{ $w->user->name }} ({{ $w->user->email }})</td>
+                <td>#{{ $w->user->id }}</td>
                 <td>{{ number_format($w->amount,2) }} {{ $w->currency }}</td>
                 <td>{{ number_format($w->fee,2) }}</td>
                 <td>{{ $w->bankingDetail->bank_name ?? '-' }}</td>
                 <td>{{ $w->bankingDetail->masked_account() ?? '****' }}</td>
+                <td>{{ $w->utr ?? '-' }}</td>
                 <td>
                     <span class="badge 
                         @if($w->status=='pending') bg-secondary
@@ -41,23 +50,13 @@
                 </td>
                 <td>{{ $w->created_at->format('Y-m-d H:i') }}</td>
                 <td>
+                    <div class="small mb-2">
+                        <div><strong>UTR:</strong> {{ $w->utr ?? '—' }}</div>
+                        <div><strong>Expert ID:</strong> #{{ $w->user->id }}</div>
+                        <div><strong>Settlement Time:</strong> {{ $w->processed_at ? \Illuminate\Support\Carbon::parse($w->processed_at)->format('Y-m-d H:i') : '—' }}</div>
+                        <div><strong>Reference:</strong> {{ $w->reference ?? '—' }}</div>
+                    </div>
                     <a href="{{ route('admin.withdrawals.show', $w->id) }}" class="btn btn-sm btn-info mb-1">View</a>
-
-                    <form action="{{ route('admin.withdrawals.approve', $w->id) }}" method="POST" style="display:inline;">
-                        @csrf
-                        <button class="btn btn-sm btn-success mb-1" onclick="return confirm('Approve and pay withdrawal #{{ $w->id }}?')">Approve & Pay</button>
-                    </form>
-
-                    <form action="{{ route('admin.withdrawals.reject', $w->id) }}" method="POST" style="display:inline;">
-                        @csrf
-                        <button class="btn btn-sm btn-danger mb-1" onclick="return confirm('Reject withdrawal #{{ $w->id }}? This will refund the user.')">Reject</button>
-                    </form>
-
-                    <form action="{{ route('admin.withdrawals.markPaid', $w->id) }}" method="POST" style="display:inline;">
-                        @csrf
-                        <input type="hidden" name="transaction_id" value="MANUAL-{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(6)) }}">
-                        <button class="btn btn-sm btn-primary mb-1" onclick="return confirm('Mark withdrawal #{{ $w->id }} as paid?')">Mark Paid</button>
-                    </form>
                 </td>
             </tr>
             @endforeach

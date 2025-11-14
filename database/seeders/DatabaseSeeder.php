@@ -33,6 +33,13 @@ class DatabaseSeeder extends Seeder
             StaticPagesSeeder::class,
             SettingsSeeder::class,
             InitialDiscountSettingSeeder::class,
+            UsersAndProfilesSeeder::class,
+            BankingDetailsSeeder::class,
+            PartnerServicesSeeder::class,
+            BookingsDemoSeeder::class,
+            ReviewsDemoSeeder::class,
+            WalletTopUpSeeder::class,
+            WithdrawalsDemoSeeder::class,
         ]);
     }
 }

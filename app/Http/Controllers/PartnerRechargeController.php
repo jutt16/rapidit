@@ -113,6 +113,18 @@ class PartnerRechargeController extends Controller
                     'description' => 'Wallet recharge via Razorpay (#' . $payment->id . ')',
                 ]);
 
+                // Send notification to user
+                app(\App\Services\FcmService::class)->sendToUser(
+                    $user,
+                    'Wallet Recharged',
+                    "₹{$amount} has been credited to your wallet",
+                    [
+                        'type' => 'wallet_recharged',
+                        'amount' => (string)$amount,
+                        'balance' => (string)$wallet->balance,
+                    ]
+                );
+
                 return redirect()->route('recharge.status', $user->id)
                     ->with('success', 'Wallet recharged successfully!');
             } else {

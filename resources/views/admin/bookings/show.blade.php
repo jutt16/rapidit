@@ -65,9 +65,9 @@
             <strong>Payment Details</strong>
         </div>
         <div class="card-body">
-            <p><strong>Amount:</strong> ${{ number_format($booking->amount, 2) }}</p>
-            <p><strong>Tax:</strong> ${{ number_format($booking->tax, 2) }}</p>
-            <p><strong>Total:</strong> <span class="fw-bold">${{ number_format($booking->total_amount, 2) }}</span></p>
+            <p><strong>Amount:</strong> ₹{{ number_format($booking->amount, 2) }}</p>
+            <p><strong>Tax:</strong> ₹{{ number_format($booking->tax, 2) }}</p>
+            <p><strong>Total:</strong> <span class="fw-bold">₹{{ number_format($booking->total_amount, 2) }}</span></p>
         </div>
     </div>
 

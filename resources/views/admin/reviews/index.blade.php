@@ -2,7 +2,12 @@
 
 @section('content')
 <div class="container-fluid">
-    <h2 class="fw-bold mb-4">⭐ Reviews Management</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">⭐ Reviews Management</h2>
+        <a href="{{ route('admin.reviews.export', request()->query()) }}" class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Export CSV
+        </a>
+    </div>
 
     @include('admin.layouts.messages')
 

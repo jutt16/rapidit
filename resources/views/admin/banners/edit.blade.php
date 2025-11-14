@@ -23,10 +23,18 @@
                 </div>
 
                 <div class="form-group mb-3">
-                    <label for="image">Image</label>
-                    <input type="file" name="image" class="form-control">
+                    <label for="image">Media (Image / Video)</label>
+                    <input type="file" name="image" class="form-control" accept="image/*,video/*">
+                    <small class="form-text text-muted">Supported: JPG, PNG, GIF, WEBP, MP4, MOV, AVI, WEBM (max 50MB)</small>
                     @if($banner->image)
-                    <img src="{{ asset('storage/'.$banner->image) }}" width="150" class="mt-2">
+                        @if($banner->media_type === 'video')
+                            <video width="150" controls class="mt-2">
+                                <source src="{{ asset('storage/'.$banner->image) }}" type="{{ $banner->mime_type ?? 'video/mp4' }}">
+                                Your browser does not support the video tag.
+                            </video>
+                        @else
+                            <img src="{{ asset('storage/'.$banner->image) }}" width="150" class="mt-2" alt="Banner media preview">
+                        @endif
                     @endif
                 </div>
 

@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\UserNotification;
+use App\Models\User;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Kreait\Firebase\Messaging\MulticastSendReport;
@@ -35,6 +37,36 @@ class FcmService
         return $this->messaging->sendMulticast($message, $tokens);
     }
 
+    /**
+     * Send notification to a single user and store in database
+     */
+    public function sendToUser(User $user, string $title, string $body, array $data = []): bool
+    {
+        // Store notification in database first
+        $notification = UserNotification::create([
+            'user_id' => $user->id,
+            'title' => $title,
+            'body' => $body,
+            'type' => 'fcm',
+            'data' => $data,
+            'sent' => false,
+        ]);
+
+        // Try to send via FCM if user has token
+        if ($user->fcm_token) {
+            try {
+                $this->sendToTokens([$user->fcm_token], $title, $body, $data);
+                $notification->update(['sent' => true]);
+                return true;
+            } catch (\Exception $e) {
+                // Notification stored but not sent
+                \Log::error("FCM send failed for user {$user->id}: " . $e->getMessage());
+                return false;
+            }
+        }
+
+        return false;
+    }
 
     public function sendToTopic(string $topic, string $title, string $body, array $data = [])
     {

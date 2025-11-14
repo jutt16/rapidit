@@ -9,10 +9,22 @@ use Illuminate\Support\Facades\Validator;
 
 class MaidPricingController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $packages = MaidPricing::orderBy('time')->get();
-        return view('admin.maid_pricings.index', compact('packages'));
+        $sort = $request->get('sort', 'price_asc');
+
+        $sortMapping = [
+            'price_asc' => ['price', 'asc'],
+            'price_desc' => ['price', 'desc'],
+            'time_asc' => ['time', 'asc'],
+            'time_desc' => ['time', 'desc'],
+        ];
+
+        [$column, $direction] = $sortMapping[$sort] ?? $sortMapping['price_asc'];
+
+        $packages = MaidPricing::orderBy($column, $direction)->get();
+
+        return view('admin.maid_pricings.index', compact('packages', 'sort'));
     }
 
     public function create()

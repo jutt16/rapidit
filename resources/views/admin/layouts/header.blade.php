@@ -15,9 +15,9 @@
                 <i class="fas fa-search"></i>
             </a>
             <div class="navbar-search-block">
-                <form class="form-inline">
+                <form class="form-inline" action="{{ route('admin.search') }}" method="GET">
                     <div class="input-group input-group-sm">
-                        <input class="form-control form-control-navbar" type="search" placeholder="Search" aria-label="Search">
+                        <input class="form-control form-control-navbar" name="query" type="search" placeholder="Search users, partners, bookings..." aria-label="Search" value="{{ request('query') }}" required>
                         <div class="input-group-append">
                             <button class="btn btn-navbar" type="submit">
                                 <i class="fas fa-search"></i>

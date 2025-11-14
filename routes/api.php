@@ -6,8 +6,11 @@ use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\BookingPaymentController;
 use App\Http\Controllers\Api\BookingRequestController;
+use App\Http\Controllers\Api\BookingStatsController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PartnerAvailabilityController;
+use App\Http\Controllers\Api\PartnerLocationController;
 use App\Http\Controllers\Api\PartnerPreferenceController;
 use App\Http\Controllers\Api\PartnerProfileController;
 use App\Http\Controllers\Api\PartnerReviewController;
@@ -22,6 +25,9 @@ use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\WithdrawalController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\PayoutWebhookController;
+use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\ZoneController as ApiZoneController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -39,6 +45,11 @@ Route::get('media/{path}', function ($path) {
 
     return response()->file($fullPath); // 👈 actually returns the file itself
 })->where('path', '.*')->name('media');
+
+Route::post('/payouts/webhook', [PayoutWebhookController::class, 'handle'])->name('payouts.webhook');
+Route::post('/payouts/sync/{withdrawalId}', [PayoutWebhookController::class, 'syncStatus'])->name('payouts.sync');
+
+Route::get('/zones', [ApiZoneController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     // Categories with services
@@ -139,6 +150,31 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('withdrawals/{id}/cancel', [WithdrawalController::class,'cancel']);
 
     Route::post('/delete-profile', [UserProfileController::class, 'deleteProfile']);
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{id}/mark-read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+
+    // Booking Stats (Last 24 hours)
+    Route::get('/bookings/stats/last-24-hours', [BookingStatsController::class, 'last24HoursCount']);
+    Route::get('/partner/bookings/stats/last-24-hours', [BookingStatsController::class, 'partnerLast24HoursCount']);
+    Route::get('/admin/bookings/stats/last-24-hours', [BookingStatsController::class, 'systemLast24HoursCount']);
+
+    // New Booking Stats APIs
+    Route::get('/bookings/stats/overall', [BookingStatsController::class, 'overallLast24Hours']);
+    Route::post('/bookings/stats/nearby', [BookingStatsController::class, 'nearbyBookingsCount']);
+
+    // Partner Location APIs
+    Route::post('/experts/near-you/count', [PartnerLocationController::class, 'expertsNearYouCount']);
+    Route::post('/experts/near-you/list', [PartnerLocationController::class, 'expertsNearYouList']);
+    Route::post('/maid/nearest-price', [PartnerLocationController::class, 'nearestMaidStartingPrice']);
+
+    // Random Reviews
+    Route::get('/reviews/random', [ReviewController::class, 'randomReviews']);
+
+    Route::get('/get-settings', [SettingController::class, 'getSettings']);
 });
 
 // Public endpoints (Razorpay will call / redirect)

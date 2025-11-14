@@ -107,6 +107,21 @@ class RazorpayPaymentController extends Controller
 
                 $booking->update(['status' => 'confirmed']);
 
+                // Send payment confirmation notification to user
+                $bookingUser = $booking->user;
+                if ($bookingUser) {
+                    app(\App\Services\FcmService::class)->sendToUser(
+                        $bookingUser,
+                        'Payment Successful',
+                        "Your payment of ₹{$booking->total_amount} for booking #{$bookingId} has been confirmed",
+                        [
+                            'type' => 'payment_confirmed',
+                            'booking_id' => (string)$bookingId,
+                            'amount' => (string)$booking->total_amount,
+                        ]
+                    );
+                }
+
                 // ✅ Redirect to new status page
                 return redirect()->route('razorpay.status', $bookingId);
             } else {
@@ -164,6 +179,21 @@ class RazorpayPaymentController extends Controller
             ]);
 
             $booking->update(['payment_status' => 'paid']);
+
+            // Send payment confirmation notification to user
+            $bookingUser = $booking->user;
+            if ($bookingUser) {
+                app(\App\Services\FcmService::class)->sendToUser(
+                    $bookingUser,
+                    'Payment Successful',
+                    "Your payment of ₹{$booking->total_amount} for booking #{$bookingId} has been confirmed",
+                    [
+                        'type' => 'payment_confirmed',
+                        'booking_id' => (string)$bookingId,
+                        'amount' => (string)$booking->total_amount,
+                    ]
+                );
+            }
 
             // ✅ Redirect to status page after manual verification
             return redirect()->route('razorpay.status', $bookingId);

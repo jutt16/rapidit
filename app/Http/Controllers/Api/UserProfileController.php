@@ -79,7 +79,7 @@ class UserProfileController extends Controller
             $profile->save();
 
             return response()->json([
-                'status' => false,
+                'status' => true,
                 'message' => 'Profile updated successfully',
                 'user'    => $user->fresh('profile'),
             ]);

@@ -19,9 +19,9 @@ return new class extends Migration
             $table->string('account_number'); // encrypted via model cast
             $table->string('ifsc')->nullable();
             $table->string('branch')->nullable();
-            $table->string('currency', 10)->default('PKR');
+            $table->string('currency', 10)->default('INR');
             $table->boolean('is_default')->default(false);
-            $table->string('status')->default('unverified'); // optional: unverified/verified
+            $table->string('status')->default('verified'); // optional: unverified/verified
             $table->timestamps();
         });
     }

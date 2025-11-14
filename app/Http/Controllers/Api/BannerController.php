@@ -11,11 +11,16 @@ class BannerController extends Controller
     public function activeBanners()
     {
         $banners = Banner::where('status', 1)->get()->map(function ($banner) {
+            $mediaUrl = asset('storage/' . $banner->image);
+
             return [
                 'id' => $banner->id,
                 'title' => $banner->title,
                 'description' => $banner->description,
-                'image' => asset('storage/' . $banner->image),
+                'image' => $mediaUrl,
+                'media_url' => $mediaUrl,
+                'media_type' => $banner->media_type ?? 'image',
+                'mime_type' => $banner->mime_type,
             ];
         });
 

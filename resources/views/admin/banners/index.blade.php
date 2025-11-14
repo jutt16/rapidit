@@ -28,7 +28,16 @@
                     @forelse($banners as $index => $banner)
                     <tr>
                         <td>{{ $index + 1 }}</td>
-                        <td><img src="{{ asset('storage/'.$banner->image) }}" width="80"></td>
+                        <td>
+                            @if($banner->media_type === 'video')
+                                <video width="120" muted loop controls>
+                                    <source src="{{ asset('storage/'.$banner->image) }}" type="{{ $banner->mime_type ?? 'video/mp4' }}">
+                                    Your browser does not support the video tag.
+                                </video>
+                            @else
+                                <img src="{{ asset('storage/'.$banner->image) }}" width="80" alt="Banner media thumbnail">
+                            @endif
+                        </td>
                         <td>{{ $banner->title }}</td>
                         <td>{{ $banner->description }}</td>
                         <td>

@@ -44,6 +44,14 @@ return [
         'key_id' => env('RAZORPAY_KEY_ID'),
         'key_secret' => env('RAZORPAY_KEY_SECRET'),
         'mode' => env('RAZORPAY_MODE', 'test'),
+        // RazorpayX specific settings for Payouts
+        'account_number' => env('RAZORPAYX_ACCOUNT_NUMBER'),
+        'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET'),
+    ],
+
+    'google' => [
+        'maps_key' => env('GOOGLE_MAPS_API_KEY'),
+        'places_key' => env('GOOGLE_PLACES_API_KEY'),
     ],
 
 ];

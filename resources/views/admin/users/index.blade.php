@@ -61,6 +61,9 @@
             <div class="card-header">
                 <h3 class="card-title">User List</h3>
                 <div class="card-tools">
+                    <a href="{{ route('admin.users.export', request()->query()) }}" class="btn btn-success btn-sm mr-1">
+                        <i class="fas fa-file-excel"></i> Export CSV
+                    </a>
                     <a href="{{ route('admin.users.create') }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-plus"></i> Add User
                     </a>
@@ -71,9 +74,11 @@
                 <table id="usersTable" class="table table-hover text-nowrap">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th>Customer ID</th>
                             <th>Name</th>
                             <th>Phone</th>
+                            <th>User Location</th>
+                            <th>User Signup Date</th>
                             <th>Role</th>
                             <th>Status</th>
                             <th>Verified</th>
@@ -83,7 +88,7 @@
                     <tbody>
                         @forelse($users as $index => $user)
                         <tr>
-                            <td>{{ $loop->iteration }}</td>
+                            <td>#{{ $user->id }}</td>
                             <td>
                                 @if($user->role == 'partner')
                                     {{ $user->partnerProfile?->full_name ?? $user->name ?? 'N/A' }}
@@ -92,6 +97,16 @@
                                 @endif
                             </td>
                             <td>{{ $user->phone ?? 'N/A' }}</td>
+                            <td>
+                                @php $primaryAddress = $user->addresses->first(); @endphp
+                                @if($primaryAddress)
+                                    <span class="d-block">{{ $primaryAddress->city ?? 'City N/A' }}, {{ $primaryAddress->state ?? 'State N/A' }}</span>
+                                    <small class="text-muted">{{ $primaryAddress->addressLine ?? '' }}</small>
+                                @else
+                                    <span class="text-muted">Not set</span>
+                                @endif
+                            </td>
+                            <td>{{ $user->created_at?->format('d M Y H:i') ?? '—' }}</td>
                             <td>
                                 <span class="badge 
                                     @if($user->role === 'admin') bg-danger

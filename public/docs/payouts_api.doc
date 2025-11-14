@@ -1,0 +1,214 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Payout & Withdrawal API Documentation</title>
+    <style>
+      body { font-family: Arial, Helvetica, sans-serif; font-size: 12pt; color: #111; }
+      h1, h2, h3 { color: #111; }
+      code, pre { background: #f5f5f5; padding: 4px 6px; border-radius: 4px; }
+      pre { white-space: pre-wrap; }
+      .mono { font-family: Consolas, "Courier New", monospace; }
+      .muted { color: #666; }
+      hr { border: none; border-top: 1px solid #ddd; margin: 20px 0; }
+    </style>
+  </head>
+  <body>
+    <h1>Payout &amp; Withdrawal API Documentation</h1>
+
+    <h2>Auth</h2>
+    <ul>
+      <li>Header: <code>Authorization: Bearer &lt;token&gt;</code></li>
+      <li>Content-Type: <code>application/json</code></li>
+    </ul>
+
+    <h2>Status lifecycle</h2>
+    <ul>
+      <li>User requests withdrawal → <b>processing</b></li>
+      <li>RazorpayX webhook updates:
+        <ul>
+          <li>Success: <b>completed</b> (+ <code>processed_at</code>)</li>
+          <li>Failure/Reverse/Cancel: <b>failed</b> and wallet auto-refunded</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h2>Endpoints</h2>
+    <h3>POST /api/withdrawals (auth)</h3>
+    <p>Creates a withdrawal and initiates RazorpayX payout.</p>
+    <p>Body</p>
+    <pre class="mono">{ "banking_detail_id": 12, "amount": 500 }</pre>
+    <p>201 Response (example)</p>
+    <pre class="mono">{
+  "success": true,
+  "data": {
+    "id": 93,
+    "user_id": 7,
+    "banking_detail_id": 12,
+    "amount": 500,
+    "fee": 10,
+    "currency": "INR",
+    "status": "processing",
+    "gateway": "razorpay",
+    "gateway_payout_id": "pout_123...",
+    "gateway_status": "processing",
+    "reference": "2f7f0f8a-...",
+    "created_at": "2025-10-30T10:12:34Z",
+    "updated_at": "2025-10-30T10:12:35Z"
+  }
+}</pre>
+    <p>Errors</p>
+    <ul>
+      <li>422: validation / insufficient funds</li>
+      <li>502: payout initiation failed (wallet auto-refunded)</li>
+    </ul>
+
+    <hr />
+
+    <h3>GET /api/withdrawals (auth)</h3>
+    <p>Paginated list of withdrawals.</p>
+    <pre class="mono">{
+  "success": true,
+  "data": {
+    "current_page": 1,
+    "data": [
+      {
+        "id": 93,
+        "amount": 500,
+        "fee": 10,
+        "currency": "INR",
+        "status": "processing",
+        "reference": "2f7f0f8a-...",
+        "banking_detail": {
+          "id": 12,
+          "bank_name": "HDFC",
+          "account_number_masked": "****1234"
+        },
+        "created_at": "2025-10-30T10:12:34Z"
+      }
+    ],
+    "last_page": 1,
+    "per_page": 20,
+    "total": 1
+  }
+}</pre>
+
+    <hr />
+
+    <h3>GET /api/withdrawals/{id} (auth)</h3>
+    <p>Details for a single withdrawal.</p>
+    <pre class="mono">{
+  "success": true,
+  "data": {
+    "id": 93,
+    "amount": 500,
+    "fee": 10,
+    "status": "processing",
+    "banking_detail": {
+      "id": 12,
+      "bank_name": "HDFC",
+      "account_number_masked": "****1234"
+    },
+    "reference": "2f7f0f8a-...",
+    "created_at": "2025-10-30T10:12:34Z"
+  }
+}</pre>
+
+    <hr />
+
+    <h3>POST /api/withdrawals/{id}/cancel (auth)</h3>
+    <p>Cancels only when status is <b>pending</b>. Refunds wallet (amount + fee).</p>
+    <pre class="mono">{ "success": true }</pre>
+
+    <hr />
+
+    <h3>POST /api/payouts/webhook (public)</h3>
+    <p>RazorpayX webhook endpoint. Verifies <code>X-Razorpay-Signature</code> using <code>RAZORPAYX_WEBHOOK_SECRET</code>.</p>
+    <p>Status mapping</p>
+    <ul>
+      <li><b>processed</b>/<b>credited</b> → <b>completed</b>, set <code>processed_at</code></li>
+      <li><b>failed</b>/<b>reversed</b>/<b>cancelled</b> → <b>failed</b>, wallet refunded (idempotent)</li>
+    </ul>
+    <p>Responses</p>
+    <ul>
+      <li>200: <span class="mono">{ "success": true }</span></li>
+      <li>401: <span class="mono">{ "success": false, "message": "Invalid signature" }</span></li>
+    </ul>
+
+    <h2>Configuration</h2>
+    <p>Add to <span class="mono">.env</span>:</p>
+    <pre class="mono">RAZORPAY_KEY_ID=...
+RAZORPAY_KEY_SECRET=...
+RAZORPAYX_ACCOUNT_NUMBER=...
+RAZORPAYX_WEBHOOK_SECRET=...</pre>
+    <p>Run migrations:</p>
+    <pre class="mono">php artisan migrate</pre>
+
+    <h2>Data contracts</h2>
+    <ul>
+      <li>Withdrawal: id, user_id, banking_detail_id, amount, fee, currency, status, gateway, gateway_payout_id, gateway_status, failure_reason, reference, processed_at, timestamps</li>
+      <li>BankingDetail: bank_name, account_holder_name, account_number, ifsc, currency, razorpay_contact_id, razorpay_fund_account_id</li>
+    </ul>
+
+    <h2>Mobile app integration guide</h2>
+    <ol>
+      <li>
+        <b>Prerequisites</b>
+        <ul>
+          <li>User must be authenticated (get bearer token after login/register).</li>
+          <li>Ensure user has a saved bank account (<span class="mono">banking_details</span>) and wallet balance &gt;= amount + fee.</li>
+        </ul>
+      </li>
+      <li>
+        <b>Create Withdrawal</b>
+        <ul>
+          <li>Endpoint: <span class="mono">POST /api/withdrawals</span></li>
+          <li>Body: <span class="mono">{ "banking_detail_id": &lt;id&gt;, "amount": &lt;number&gt; }</span></li>
+          <li>Handle responses:
+            <ul>
+              <li>201: show status <b>processing</b> to user.</li>
+              <li>422: show validation/insufficient funds message.</li>
+              <li>502: show payout initiation failed; funds auto-refunded.</li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <b>Poll or subscribe for status</b>
+        <ul>
+          <li>Option A (poll): Call <span class="mono">GET /api/withdrawals/{id}</span> every 10–20s until status is <b>completed</b> or <b>failed</b>.</li>
+          <li>Option B (list): Refresh <span class="mono">GET /api/withdrawals</span> and display the latest status.</li>
+          <li>Recommended UX states:
+            <ul>
+              <li>processing: "Transfer in progress"</li>
+              <li>completed: "Transfer completed"</li>
+              <li>failed: "Transfer failed" (wallet refunded)</li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <b>Display masked bank data</b>
+        <ul>
+          <li>Use <span class="mono">banking_detail.account_number_masked</span> from responses; never display full account number.</li>
+        </ul>
+      </li>
+      <li>
+        <b>Handle currency</b>
+        <ul>
+          <li>RazorpayX supports INR. Ensure currency and amounts are shown in rupees in UI.</li>
+        </ul>
+      </li>
+      <li>
+        <b>Errors &amp; Retries</b>
+        <ul>
+          <li>Do not retry POST <span class="mono">/api/withdrawals</span> on network failure blindly; show a retry button. The server uses idempotency for payout creation.</li>
+          <li>For polling, stop after ~2–3 minutes and prompt user to check history.</li>
+        </ul>
+      </li>
+    </ol>
+
+    <p class="muted">Last updated: 2025-10-30</p>
+  </body>
+</html>
+
+

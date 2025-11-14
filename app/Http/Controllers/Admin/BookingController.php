@@ -12,17 +12,22 @@ class BookingController extends Controller
     {
         $bookings = Booking::with([
             'user',
-            'requests' => function ($q) {
-                $q->where('status', 'accepted')->with('partner');
-            }
-        ])->get();
+            'address',
+            'requests.partner.partnerProfile',
+            'requests.partner.addresses',
+        ])->latest()->get();
 
         return view('admin.bookings.index', compact('bookings'));
     }
 
     public function show($id)
     {
-        $booking = Booking::with(['user', 'service', 'address', 'requests.partner'])->findOrFail($id);
+        $booking = Booking::with([
+            'user',
+            'service',
+            'address',
+            'requests.partner.partnerProfile',
+        ])->findOrFail($id);
         return view('admin.bookings.show', compact('booking'));
     }
 
@@ -53,5 +58,90 @@ class BookingController extends Controller
         $booking->delete();
 
         return redirect()->route('admin.bookings.index')->with('success', 'Booking deleted successfully.');
+    }
+
+    // Export bookings to CSV
+    public function export(Request $request)
+    {
+        $query = Booking::with([
+            'user',
+            'service',
+            'address',
+            'payment',
+            'requests' => function ($q) {
+                $q->where('status', 'accepted')->with('partner');
+            }
+        ]);
+
+        // Apply filters if any
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('service_id')) {
+            $query->where('service_id', $request->service_id);
+        }
+
+        $bookings = $query->latest()->get();
+
+        $fileName = 'bookings_export_' . date('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$fileName\"",
+        ];
+
+        $callback = function() use ($bookings) {
+            $file = fopen('php://output', 'w');
+            
+            // CSV headers
+            fputcsv($file, [
+                'Booking ID',
+                'Customer Name',
+                'Customer Phone',
+                'Service',
+                'Partner Name',
+                'Partner Phone',
+                'Status',
+                'Amount',
+                'Payment Status',
+                'Schedule Date',
+                'Schedule Time',
+                'Address',
+                'City',
+                'Pincode',
+                'Created At',
+                'Completed At'
+            ]);
+
+            // CSV rows
+            foreach ($bookings as $booking) {
+                $acceptedRequest = $booking->requests->first();
+                $partner = $acceptedRequest ? $acceptedRequest->partner : null;
+
+                fputcsv($file, [
+                    $booking->id,
+                    $booking->user->name ?? 'N/A',
+                    $booking->user->phone ?? 'N/A',
+                    $booking->service->name ?? 'N/A',
+                    $partner ? $partner->name : 'Not Assigned',
+                    $partner ? $partner->phone : 'N/A',
+                    ucfirst($booking->status),
+                    number_format($booking->amount, 2),
+                    $booking->payment ? ucfirst($booking->payment->status) : 'N/A',
+                    $booking->schedule_date,
+                    $booking->schedule_time,
+                    $booking->address ? $booking->address->address_line : 'N/A',
+                    $booking->address ? $booking->address->city : 'N/A',
+                    $booking->address ? $booking->address->pincode : 'N/A',
+                    $booking->created_at,
+                    $booking->completed_at ?? 'N/A'
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

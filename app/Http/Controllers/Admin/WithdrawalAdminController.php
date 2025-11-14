@@ -50,6 +50,7 @@ class WithdrawalAdminController extends Controller
                 $w->update([
                     'status' => 'completed',
                     'reference' => $providerResult['tx_id'] ?? Str::upper(Str::random(10)),
+                    'utr' => $providerResult['utr'] ?? ($providerResult['tx_id'] ?? $w->utr),
                     'processed_at' => now()
                 ]);
                 DB::commit();
@@ -134,6 +135,7 @@ class WithdrawalAdminController extends Controller
             $w->update([
                 'status' => 'completed',
                 'reference' => $transactionId,
+                'utr' => $transactionId ?: $w->utr,
                 'processed_by' => $admin->id,
                 'processed_at' => now()
             ]);
@@ -162,5 +164,81 @@ class WithdrawalAdminController extends Controller
         } catch (\Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    // Export withdrawals to CSV
+    public function export(Request $req)
+    {
+        $query = Withdrawal::with('user', 'bankingDetail');
+
+        // Apply filters if any
+        if ($req->filled('status')) {
+            $query->where('status', $req->status);
+        }
+
+        $withdrawals = $query->latest()->get();
+
+        $fileName = 'withdrawals_export_' . date('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$fileName\"",
+        ];
+
+        $callback = function() use ($withdrawals) {
+            $file = fopen('php://output', 'w');
+            
+            // CSV headers
+            fputcsv($file, [
+                'Withdrawal ID',
+                'User Name',
+                'User Phone',
+                'Amount',
+                'Fee',
+                'Net Amount',
+                'Status',
+                'Payment Method',
+                'Account Holder',
+                'Account Number',
+                'Bank Name',
+                'IFSC Code',
+                'UPI ID',
+                'Reference/Transaction ID',
+                'UTR',
+                'Admin Note',
+                'Requested At',
+                'Processed At'
+            ]);
+
+            // CSV rows
+            foreach ($withdrawals as $w) {
+                $bankDetail = $w->bankingDetail;
+                
+                fputcsv($file, [
+                    $w->id,
+                    $w->user->name ?? 'N/A',
+                    $w->user->phone ?? 'N/A',
+                    number_format($w->amount, 2),
+                    number_format($w->fee, 2),
+                    number_format($w->amount - $w->fee, 2),
+                    ucfirst($w->status),
+                    $w->payment_method ?? 'N/A',
+                    $bankDetail ? $bankDetail->account_holder_name : 'N/A',
+                    $bankDetail ? $bankDetail->account_number : 'N/A',
+                    $bankDetail ? $bankDetail->bank_name : 'N/A',
+                    $bankDetail ? $bankDetail->ifsc_code : 'N/A',
+                    $bankDetail ? $bankDetail->upi_id : 'N/A',
+                    $w->reference ?? 'N/A',
+                    $w->utr ?? 'N/A',
+                    $w->admin_note ?? 'N/A',
+                    $w->created_at,
+                    $w->processed_at ?? 'N/A'
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

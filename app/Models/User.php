@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Traits\HasFCM;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasFactory, Notifiable, HasApiTokens, HasFcm;
 
     /**
      * The attributes that are mass assignable.
@@ -68,6 +69,11 @@ class User extends Authenticatable
         return $this->hasOne(\App\Models\PartnerAvailability::class, 'partner_id');
     }
 
+    public function addresses()
+    {
+        return $this->hasMany(\App\Models\UserAddress::class);
+    }
+
     public function wallet()
     {
         return $this->hasOne(Wallet::class);
@@ -96,5 +102,10 @@ class User extends Authenticatable
     public function withdrawals()
     {
         return $this->hasMany(\App\Models\Withdrawal::class);
+    }
+
+    public function userNotifications()
+    {
+        return $this->hasMany(\App\Models\UserNotification::class);
     }
 }

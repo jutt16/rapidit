@@ -51,4 +51,70 @@ class ReviewController extends Controller
 
         return redirect()->route('admin.reviews.index')->with('success', 'Review rejected successfully.');
     }
+
+    /**
+     * Export reviews to CSV
+     */
+    public function export(Request $request)
+    {
+        $query = Review::with(['user', 'partner', 'booking']);
+
+        // Apply filters if any
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('rating')) {
+            $query->where('rating', $request->rating);
+        }
+
+        $reviews = $query->latest()->get();
+
+        $fileName = 'reviews_export_' . date('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$fileName\"",
+        ];
+
+        $callback = function() use ($reviews) {
+            $file = fopen('php://output', 'w');
+            
+            // CSV headers
+            fputcsv($file, [
+                'Review ID',
+                'Reviewer Type',
+                'Reviewer Name',
+                'Reviewer Phone',
+                'Partner Name',
+                'Partner Phone',
+                'Booking ID',
+                'Rating',
+                'Comment',
+                'Status',
+                'Created At'
+            ]);
+
+            // CSV rows
+            foreach ($reviews as $review) {
+                fputcsv($file, [
+                    $review->id,
+                    ucfirst($review->reviewer_type ?? 'customer'),
+                    $review->user->name ?? 'N/A',
+                    $review->user->phone ?? 'N/A',
+                    $review->partner->name ?? 'N/A',
+                    $review->partner->phone ?? 'N/A',
+                    $review->booking_id,
+                    $review->rating,
+                    $review->comment ?? 'No comment',
+                    ucfirst($review->status),
+                    $review->created_at
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

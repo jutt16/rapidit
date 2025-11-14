@@ -25,16 +25,21 @@ class BannerController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'image' => 'required|file|mimes:jpeg,png,jpg,gif,webp,mp4,mpeg,avi,mov,webm|max:51200',
             'status' => 'required|boolean',
         ]);
 
-        $imagePath = $request->file('image')->store('banners', 'public');
+        $mediaFile = $request->file('image');
+        $mediaPath = $mediaFile->store('banners', 'public');
+        $mimeType = $mediaFile->getMimeType();
+        $mediaType = str_starts_with($mimeType, 'video/') ? 'video' : 'image';
 
         Banner::create([
             'title' => $request->title,
             'description' => $request->description,
-            'image' => $imagePath,
+            'image' => $mediaPath,
+            'media_type' => $mediaType,
+            'mime_type' => $mimeType,
             'status' => $request->status,
         ]);
 
@@ -51,14 +56,18 @@ class BannerController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'image' => 'nullable|file|mimes:jpeg,png,jpg,gif,webp,mp4,mpeg,avi,mov,webm|max:51200',
             'status' => 'required|boolean',
         ]);
 
         if ($request->hasFile('image')) {
-            // delete old image
+            // delete old media
             Storage::disk('public')->delete($banner->image);
-            $banner->image = $request->file('image')->store('banners', 'public');
+
+            $mediaFile = $request->file('image');
+            $banner->image = $mediaFile->store('banners', 'public');
+            $banner->mime_type = $mediaFile->getMimeType();
+            $banner->media_type = str_starts_with($banner->mime_type, 'video/') ? 'video' : 'image';
         }
 
         $banner->update([

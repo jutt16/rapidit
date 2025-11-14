@@ -22,8 +22,9 @@
                 </div>
 
                 <div class="form-group mb-3">
-                    <label for="image">Image</label>
-                    <input type="file" name="image" class="form-control" required>
+                    <label for="image">Media (Image / Video)</label>
+                    <input type="file" name="image" class="form-control" accept="image/*,video/*" required>
+                    <small class="form-text text-muted">Supported: JPG, PNG, GIF, WEBP, MP4, MOV, AVI, WEBM (max 50MB)</small>
                 </div>
 
                 <div class="form-group mb-3">
