@@ -21,11 +21,13 @@
 
 <body class="hold-transition login-page">
     <div class="login-box">
-        <div class="login-logo">
-            <b>Rapid</b> It
-        </div>
         <!-- /.login-logo -->
         <div class="card">
+            <div style="width:100%; text-align:center; overflow:hidden; height:70px; margin-bottom: -5px;">
+                <img src="{{ asset('admin-assets/dist/img/logo.png') }}"
+                    alt="RapidIt Logo"
+                    style="width:60%; height:100%; object-fit:cover; object-position:center;">
+            </div>
             @include('admin.layouts.messages')
             <div class="card-body login-card-body">
                 <p class="login-box-msg">Sign in to start your session</p>

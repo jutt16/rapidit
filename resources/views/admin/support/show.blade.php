@@ -9,7 +9,16 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <h5><strong>Name:</strong> {{ $message->name }}</h5>
+            <h5><strong>Name:</strong> 
+                @if($message->user_id && $message->user)
+                    <a href="{{ route('admin.users.show', $message->user_id) }}" class="text-primary text-decoration-none">
+                        {{ $message->name }}
+                        <i class="fas fa-external-link-alt ms-1" style="font-size: 0.875rem;"></i>
+                    </a>
+                @else
+                    {{ $message->name }}
+                @endif
+            </h5>
             <h6><strong>Email:</strong> {{ $message->email }}</h6>
             <h6><strong>User Type:</strong> {{ ucfirst($message->user_type) }}</h6>
             <hr>

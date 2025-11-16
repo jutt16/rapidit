@@ -24,7 +24,16 @@
                 <tbody>
                     @foreach($messages as $msg)
                     <tr>
-                        <td>{{ $msg->name }}</td>
+                        <td>
+                            @if($msg->user_id && $msg->user)
+                                <a href="{{ route('admin.users.show', $msg->user_id) }}" class="text-primary text-decoration-none">
+                                    {{ $msg->name }}
+                                    <i class="fas fa-external-link-alt ms-1" style="font-size: 0.75rem;"></i>
+                                </a>
+                            @else
+                                {{ $msg->name }}
+                            @endif
+                        </td>
                         <td>{{ $msg->email }}</td>
                         <td>{{ ucfirst($msg->user_type) }}</td>
                         <td>{{ Str::limit($msg->message, 50) }}</td>

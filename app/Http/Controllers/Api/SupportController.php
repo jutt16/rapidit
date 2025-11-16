@@ -17,6 +17,11 @@ class SupportController extends Controller
             'user_type' => 'required|in:user,partner,guest',
         ]);
 
+        // Store user_id if user is authenticated
+        if ($request->user()) {
+            $validated['user_id'] = $request->user()->id;
+        }
+
         $support = SupportMessage::create($validated);
 
         return response()->json([

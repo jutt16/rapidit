@@ -20,6 +20,11 @@ class SettingsSeeder extends Seeder
         );
 
         Setting::updateOrCreate(
+            ['key' => 'upto_initial_discount'],
+            ['value' => '0', 'type' => 'float', 'description' => 'Up to initial discount amount/percentage']
+        );
+
+        Setting::updateOrCreate(
             ['key' => 'app_timezone'],
             ['value' => config('app.timezone'), 'type' => 'string', 'description' => 'Application timezone']
         );

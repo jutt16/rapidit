@@ -183,6 +183,7 @@ class BookingController extends Controller
                 ->exists();
 
             $amount = $request->amount;
+            $originalAmount = $amount; // Store original amount before discount
             $totalAmount = $request->total_amount;
             $discountApplied = false;
 
@@ -190,7 +191,21 @@ class BookingController extends Controller
                 $discountPercent = (float) Setting::get('initial_discount', 0);
                 if ($discountPercent > 0) {
                     $discountAmount = round(($amount * $discountPercent) / 100, 2);
+                    
+                    // Apply "upto_initial_discount" cap if set
+                    $uptoInitialDiscount = (float) Setting::get('upto_initial_discount', 0);
+                    if ($uptoInitialDiscount > 0 && $discountAmount > $uptoInitialDiscount) {
+                        $discountAmount = $uptoInitialDiscount;
+                    }
+                    
+                    // Ensure discount doesn't exceed the original amount
+                    if ($discountAmount > $amount) {
+                        $discountAmount = $amount;
+                    }
+                    
                     $amountAfterDiscount = $amount - $discountAmount;
+                    // Ensure amount after discount is never negative
+                    $amountAfterDiscount = max(0, $amountAfterDiscount);
 
                     $amount = $amountAfterDiscount;
                     $totalAmount = round($amountAfterDiscount + ($request->tax ?? 0), 2);
@@ -233,6 +248,7 @@ class BookingController extends Controller
                 'schedule_time'            => $request->schedule_time,
                 'payment_method'           => $request->payment_method,
                 'amount'                   => $amount,
+                'original_amount'          => $originalAmount, // Store original amount before discount
                 'tax'                      => $request->tax ?? 0,
                 'total_amount'             => $totalAmount,
                 'service_time'             => $request->service_time,
@@ -430,29 +446,30 @@ class BookingController extends Controller
         $partner = $acceptedRequest->partner;
         $wallet = \App\Models\Wallet::firstOrCreate(['user_id' => $partner->id], ['balance' => 0]);
 
+        // ✅ Determine the amount to use for partner payment
+        // COD: Use discounted amount (what customer actually paid)
+        // Razorpay: Use original amount (before discount, what customer was supposed to pay)
+        $partnerAmount = $booking->payment_method === 'razorpay' 
+            ? ($booking->original_amount ?? $booking->amount) // Use original amount for Razorpay
+            : $booking->amount; // Use discounted amount for COD
+
         // ✅ Calculate commission and partner earning
         $service = $booking->service;
         $commissionPct = $service->commission_pct ?? 0;
-        $commissionAmount = round($booking->amount * ($commissionPct / 100), 2);
-        $partnerEarning = round($booking->amount - $commissionAmount, 2);
+        $commissionAmount = round($partnerAmount * ($commissionPct / 100), 2);
+        $partnerEarning = round($partnerAmount - $commissionAmount, 2);
 
         try {
             if ($booking->payment_method === 'razorpay') {
-                // ✅ Razorpay: Credit only (net amount after commission)
-                $wallet->credit($partnerEarning, "Earning (after commission) for booking #{$booking->id}");
+                // ✅ Razorpay: Credit full original amount (after commission)
+                $wallet->credit($partnerEarning, "Earning (after commission) for booking #{$booking->id} - Original amount: ₹{$partnerAmount}");
             } elseif ($booking->payment_method === 'cod') {
-                // ✅ COD: Credit full amount, then debit full amount + commission (can go negative)
+                // ✅ COD: Credit discounted amount (what customer actually paid), then debit commission only
+                // Partner collects discounted amount from customer, gets discounted amount - commission
                 $wallet->credit($booking->amount, "COD collection for booking #{$booking->id}");
 
-                // force debit even if insufficient balance
-                $wallet->balance -= ($booking->amount + $commissionAmount);
-                $wallet->save();
-
-                $wallet->transactions()->create([
-                    'type' => 'debit',
-                    'amount' => $booking->amount + $commissionAmount,
-                    'description' => "COD settlement & commission deduction for booking #{$booking->id}",
-                ]);
+                // Debit only commission (not the full amount)
+                $wallet->debit($commissionAmount, "Commission deduction for booking #{$booking->id}");
             }
 
             // Send notifications to both user and partner
@@ -488,8 +505,12 @@ class BookingController extends Controller
                 'data' => [
                     'booking_id' => $booking->id,
                     'payment_method' => $booking->payment_method,
+                    'original_amount' => $booking->original_amount ?? $booking->amount,
+                    'discounted_amount' => $booking->amount,
+                    'partner_amount' => $partnerAmount,
                     'credited_amount' => $booking->payment_method === 'razorpay' ? $partnerEarning : $booking->amount,
                     'commission' => $commissionAmount,
+                    'partner_earning' => $partnerEarning,
                     'final_wallet_balance' => $wallet->balance,
                 ],
             ]);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\UserProfile;
+use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -16,9 +17,15 @@ class UserProfileController extends Controller
     public function get(Request $request)
     {
         $user = $request->user()->load('profile');
+        
+        // Check if user has already received initial discount
+        $initialDiscountApplied = Booking::where('user_id', $user->id)
+            ->where('initial_discount_applied', true)
+            ->exists();
 
         return response()->json([
             'user' => $user,
+            'initial_discount_applied' => $initialDiscountApplied,
         ]);
     }
 

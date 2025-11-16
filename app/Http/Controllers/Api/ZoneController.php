@@ -12,13 +12,7 @@ class ZoneController extends Controller
         $zones = Zone::query()
             ->where('is_active', true)
             ->orderBy('name')
-            ->get([
-                'id',
-                'name',
-                'description',
-                'coordinates',
-                'color',
-            ]);
+            ->get();
 
         return response()->json([
             'data' => $zones,

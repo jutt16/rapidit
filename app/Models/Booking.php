@@ -15,6 +15,7 @@ class Booking extends Model
         'schedule_time',
         'payment_method',
         'amount',
+        'original_amount', // amount before discount
         'tax',
         'total_amount',
         'initial_discount_applied', // newly added

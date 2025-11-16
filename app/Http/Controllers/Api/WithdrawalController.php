@@ -18,7 +18,21 @@ class WithdrawalController extends Controller
     {
         try {
             $user = $req->user();
-            $list = $user->withdrawals()->with('bankingDetail')->latest()->paginate(20);
+            $query = $user->withdrawals()->with('bankingDetail')->latest();
+
+            if ($req->filled('utr')) {
+                $query->where('utr', $req->input('utr'));
+            }
+
+            if ($req->filled('reference')) {
+                $query->where('reference', $req->input('reference'));
+            }
+
+            if ($req->filled('status')) {
+                $query->where('status', $req->input('status'));
+            }
+
+            $list = $query->paginate(20);
 
             // Transform to hide sensitive info
             $list->getCollection()->transform(function ($w) {
@@ -109,7 +123,7 @@ class WithdrawalController extends Controller
                 'banking_detail_id' => $banking->id,
                 'amount' => $amount,
                 'fee' => $fee,
-                'currency' => $banking->currency ?? 'PKR',
+                'currency' => $banking->currency ?? 'INR',
                 'status' => 'processing',
                 'reference' => Str::uuid(),
                 'wallet_transaction_id' => $debitTransaction->id ?? null,

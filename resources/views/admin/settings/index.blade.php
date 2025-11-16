@@ -44,6 +44,22 @@
                     </div>
                 </div>
 
+                {{-- Up to Initial Discount --}}
+                <div class="form-group row mt-3">
+                    <label for="upto_initial_discount" class="col-sm-2 col-form-label">Up to Initial Discount</label>
+                    <div class="col-sm-4">
+                        <input type="number" name="upto_initial_discount" id="upto_initial_discount"
+                            class="form-control @error('upto_initial_discount') is-invalid @enderror"
+                            value="{{ old('upto_initial_discount', $upto_initial_discount) }}" step="0.1" min="0" required>
+                        @error('upto_initial_discount')
+                        <span class="invalid-feedback">{{ $message }}</span>
+                        @enderror
+                        <small class="form-text text-muted">
+                            Maximum discount amount/percentage for initial discount.
+                        </small>
+                    </div>
+                </div>
+
                 {{-- Application Timezone --}}
                 <div class="form-group row mt-3">
                     <label for="app_timezone" class="col-sm-2 col-form-label">Application Timezone</label>
